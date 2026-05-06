@@ -1,0 +1,63 @@
+url: https://slopezpe.github.io/litReview/
+
+template:
+  bootstrap: 5
+  light-switch: false
+  includes:
+    after_body: |
+      <script>document.querySelectorAll('[data-bs-theme]').forEach(el => el.setAttribute('data-bs-theme', 'light'));</script>
+  bslib:
+    bootswatch: minty
+    primary: "#7ea9c7"
+    secondary: "#76b7b2"
+    success: "#59a14f"
+    info: "#b07aa1"
+    warning: "#edc948"
+    danger: "#f16769"
+    navbar-bg: "#7ea9c7"
+    navbar-light-color: "#ffffff"
+    navbar-light-hover-color: "#edc948"
+    navbar-light-active-color: "#ffffff"
+    link-color: "#f16769"
+    link-hover-color: "#edc948"
+    code-color: "#59a14f"
+    bs-body-bg: "#ffffff"
+  structure:
+    left: [intro, reference, articles]
+    right: [search, github]
+
+reference:
+  - title: "Visualization"
+    desc: "Create summary plots"
+    contents:
+      - reviewBar
+      - reviewWaffle
+      - reviewPie
+      - reviewOverlap
+      - reviewTrend
+      - reviewMap
+      - reviewAlluvial
+
+  - title: "Tables"
+    desc: "Formatted summary tables"
+    contents:
+      - reviewTable
+
+  - title: "Summarization"
+    desc: "Summarize literature review data"
+    contents:
+      - summarize_data
+
+  - title: "Theme"
+    desc: "Consistent ggplot theme"
+    contents:
+      - theme_litreview
+
+  - title: "Data Import"
+    desc: "Functions for loading data"
+    contents:
+      - import_from_google_drive
+
+  - title: "Helpers"
+    contents:
+      - PALETTE

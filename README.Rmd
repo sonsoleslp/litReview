@@ -1,0 +1,110 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%",
+  fig.width = 8,
+  fig.height = 4
+)
+```
+
+# litReview
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+`litReview` provides functions to summarize and visualize categorical data from literature reviews. All plot functions return standard ggplot objects you can customize with `+`.
+
+## Installation
+
+```{r eval = FALSE}
+remotes::install_github("sonsoleslp/litReview")
+```
+
+## Usage
+
+```{r setup}
+library(litReview)
+
+path <- system.file("extdata", "example_studies.xlsx", package = "litReview")
+studies <- rio::import(path)
+```
+
+### Bar chart
+
+```{r bar}
+reviewBar(studies, Design)
+```
+
+```{r bar-custom}
+reviewBar(studies, Design, fill = "#59a14f") +
+  ggplot2::labs(title = "Study Designs")
+```
+
+### Study labels on bars
+
+```{r studlabs, fig.height = 4}
+reviewBar(studies, Design, fill = PALETTE[2], studlabs = TRUE)
+```
+
+### Waffle chart
+
+```{r waffle}
+reviewWaffle(studies, Design)
+```
+
+### Donut chart
+
+```{r pie}
+reviewPie(studies, Design)
+```
+
+### Co-occurrence heatmap
+
+```{r overlap, fig.height = 4}
+reviewOverlap(studies, Design, Outcome)
+```
+
+### Alluvial plot
+
+```{r alluvial, fig.height = 5}
+reviewAlluvial(studies, c("Design", "Outcome"), labels = "prop")
+```
+
+### Year trend
+
+```{r trend}
+reviewTrend(studies, Design)
+```
+
+### World map
+
+```{r map, fig.width = 10}
+reviewMap(studies)
+```
+
+### Summary table
+
+```{r table}
+reviewTable(studies, Design)
+```
+
+### Handling missing data
+
+```{r na}
+df_na <- data.frame(
+  StudyID = paste0("S", 1:8),
+  Design  = c("RCT", "Cohort", NA, "RCT", "Case-control", NA, "RCT", "Cohort"),
+  stringsAsFactors = FALSE
+)
+reviewBar(df_na, Design, na.rm = FALSE, na_label = "Missing", na_last = TRUE)
+```
+
+ 

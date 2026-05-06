@@ -1,0 +1,14 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^LICENSE\.md$
+^README\.Rmd$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$
+^utils\.R$
+^data\.xlsx$
+^data-raw$
+^utils2\.R$
+^README\.html$
+^README\.knit\.md$

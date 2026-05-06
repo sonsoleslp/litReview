@@ -1,0 +1,277 @@
+---
+title: "Getting Started with litReview"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with litReview}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+## Overview
+
+`litReview` helps you summarize and visualize categorical data extracted during
+a literature review. Every plot function returns a standard ggplot that you can
+customize with `+`. Column names can be passed bare or quoted.
+
+```{r setup}
+library(litReview)
+
+path <- system.file("extdata", "example_studies.xlsx", package = "litReview")
+studies <- rio::import(path)
+head(studies)
+```
+
+ 
+
+## Bar chart
+
+`reviewBar()` produces a horizontal bar chart with frequency and percentage
+labels.
+
+```{r bar-design}
+reviewBar(studies, Design)
+```
+
+Customize with `+` like any ggplot:
+
+```{r bar-custom}
+library(ggplot2)
+reviewBar(studies, Design, fill = "#59a14f") +
+  labs(title = "Study Designs", subtitle = "n = 12 studies")
+```
+
+### Study labels on bars
+
+Set `studlabs = TRUE` to overlay the contributing study IDs on each bar:
+
+```{r bar-studlabs, fig.height = 6}
+reviewBar(studies, Design, fill = PALETTE[2], studlabs = TRUE)
+```
+
+### Multi-value columns
+
+The `Outcome` column contains multiple values per cell separated by `"\r\n"`:
+
+```{r bar-outcome}
+reviewBar(studies, Outcome, fill = PALETTE[4], width = 0.6)
+```
+
+### Adjusting label space
+
+If labels are clipped, increase `label_space` (default 1.6):
+
+```{r bar-labelspace}
+reviewBar(studies, Country, fill = PALETTE[6], label_space = 2)
+```
+
+## Waffle chart
+
+Each square represents one study occurrence:
+
+```{r waffle-design}
+reviewWaffle(studies, Design)
+```
+
+```{r waffle-outcome, fig.height = 4}
+reviewWaffle(studies, Outcome, ncol = 6)
+```
+
+## Donut / pie chart
+
+```{r pie-design}
+reviewPie(studies, Design)
+```
+
+Set `donut = FALSE` for a classic pie:
+
+```{r pie-full}
+reviewPie(studies, Design, donut = FALSE)
+```
+
+## Co-occurrence heatmap
+
+`reviewOverlap()` shows how two columns co-occur across studies:
+
+```{r overlap, fig.height = 4}
+reviewOverlap(studies, Design, Outcome)
+```
+
+## Alluvial plot
+
+`reviewAlluvial()` shows co-occurrence and flow between categories across
+multiple columns. Each study traces a path through the strata. Requires the
+`ggalluvial` package.
+
+```{r alluvial, fig.height = 5}
+reviewAlluvial(studies, c("Design", "Outcome"))
+```
+
+Add proportion or count labels on each stratum:
+
+```{r alluvial-prop, fig.height = 5}
+reviewAlluvial(studies, c("Design", "Outcome"), labels = "prop")
+```
+
+Show flow counts between strata:
+
+```{r alluvial-flow, fig.height = 5}
+reviewAlluvial(studies, c("Design", "Outcome"), labels = "count",
+               flow_labels = TRUE)
+```
+
+Custom axis labels:
+
+```{r alluvial-labels, fig.height = 5}
+reviewAlluvial(studies, c("Design", "Outcome"),
+               axis_labels = c("Study Design", "Reported Outcome"))
+```
+
+## Year trend
+
+`reviewTrend()` shows how categories distribute across publication years:
+
+```{r trend}
+reviewTrend(studies, Design)
+```
+
+Add counts, within-year percentages, or both on each segment:
+
+```{r trend-count}
+reviewTrend(studies, Design, labels = "count")
+```
+
+```{r trend-percent}
+reviewTrend(studies, Design, labels = "percent")
+```
+
+```{r trend-both}
+reviewTrend(studies, Design, labels = "both")
+```
+
+Or overlay study IDs:
+
+```{r trend-studies}
+reviewTrend(studies, Design, labels = "studies")
+```
+
+## World map
+
+`reviewMap()` shades countries by the number of studies. Common aliases like
+"United States" or "United Kingdom" are resolved automatically:
+
+```{r map, fig.width = 10, fig.height = 5}
+reviewMap(studies)
+```
+
+## Summary table
+
+`reviewTable()` returns a formatted `gt` table:
+
+```{r table-design}
+reviewTable(studies, Design)
+```
+
+## Handling missing data
+
+Literature review datasets often have missing values. All functions accept
+`na.rm`, `na_label`, and `na_in_percent` to control how NAs are handled.
+
+Let's create example data with some missing values:
+
+```{r na-data}
+df_na <- data.frame(
+  StudyID = paste0("S", 1:10),
+  Design  = c("RCT", "Cohort", NA, "RCT", "Case-control",
+              NA, "RCT", "Cohort", NA, "RCT"),
+  stringsAsFactors = FALSE
+)
+```
+
+### Drop NAs, percentages of total (default)
+
+NAs are dropped, but the denominator is all 10 studies. Percentages reflect the
+share of the full sample, so they do not sum to 100%:
+
+```{r na-default}
+summarize_data(df_na, Design)
+```
+
+### Drop NAs, percentages of reported only
+
+Set `na_in_percent = FALSE` so that the denominator only counts the 7 studies
+that reported a design. Percentages sum to 100%:
+
+```{r na-pct-reported}
+summarize_data(df_na, Design, na_in_percent = FALSE)
+```
+
+### Keep NAs, percentages of total
+
+Set `na.rm = FALSE` to include a "Not reported" category. All percentages sum
+to 100%:
+
+```{r na-keep}
+summarize_data(df_na, Design, na.rm = FALSE)
+```
+
+### Keep NAs with a custom label, percentages of reported
+
+Combine all three parameters. Here "Missing" replaces `NA`, and the denominator
+excludes missing rows:
+
+```{r na-custom}
+summarize_data(df_na, Design, na.rm = FALSE, na_label = "Missing",
+               na_in_percent = FALSE)
+```
+
+### Using NA options in plots
+
+The same parameters work in every plot function:
+
+```{r na-bar, fig.height = 4}
+reviewBar(df_na, Design, na.rm = FALSE, na_label = "Missing", na_in_percent = FALSE)
+```
+
+```{r na-pie}
+reviewPie(df_na, Design, na.rm = FALSE)
+```
+
+## Custom study ID column
+
+All functions default to `study_id = StudyID`. If your data uses a different
+column, pass it:
+
+```{r custom-id}
+df <- data.frame(
+  ID = paste0("A", 1:5),
+  Type = c("X", "Y", "X", "Z", "X"),
+  stringsAsFactors = FALSE
+)
+reviewBar(df, Type, study_id = ID)
+```
+
+## Using `summarize_data()` directly
+
+If you need the raw summary data frame (e.g. for further processing), use
+`summarize_data()`. Note that `Percent` is numeric:
+
+```{r summarize}
+summarize_data(studies, Design)
+```
+
+## Palette
+
+`PALETTE` provides 8 colors you can cycle through:
+
+```{r palette}
+PALETTE
+```
