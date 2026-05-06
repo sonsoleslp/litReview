@@ -12,3 +12,4 @@
 ^utils2\.R$
 ^README\.html$
 ^README\.knit\.md$
+^data-raw\/logo\.R$

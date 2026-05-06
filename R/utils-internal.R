@@ -29,6 +29,18 @@ recycle_colors <- function(colors, n) {
   if (length(colors) < n) rep_len(colors, n) else colors
 }
 
+#' Lighten a hex color by blending toward white
+#'
+#' @param hex Character. A hex color like `"#7BB0D1"`.
+#' @param amount Numeric 0--1. 0 = unchanged, 1 = white.
+#' @return Character. Lightened hex color.
+#' @noRd
+lighten_color <- function(hex, amount = 0.5) {
+  rgb_vals <- grDevices::col2rgb(hex)[, 1]
+  blended <- as.integer(rgb_vals + (255 - rgb_vals) * amount)
+  grDevices::rgb(blended[1], blended[2], blended[3], maxColorValue = 255)
+}
+
 #' Split a multi-value column into long format
 #'
 #' @param data A data frame.
@@ -37,6 +49,11 @@ recycle_colors <- function(colors, n) {
 #' @return A data frame with one value per row in `col_name`.
 #' @noRd
 split_col <- function(data, col_name, sep = "\r\n") {
+  # Normalize \r\n to \n so splitting works regardless of line ending style
+  if (sep == "\r\n") {
+    data[[col_name]] <- gsub("\r\n", "\n", data[[col_name]], fixed = TRUE)
+    sep <- "\n"
+  }
   data <- tidyr::separate_longer_delim(data, !!rlang::sym(col_name), delim = sep)
   data[[col_name]] <- trimws(data[[col_name]])
   data

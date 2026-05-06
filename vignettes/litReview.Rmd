@@ -61,7 +61,7 @@ reviewBar(studies, Design, fill = PALETTE[2], studlabs = TRUE)
 
 The `Outcome` column contains multiple values per cell separated by `"\r\n"`:
 
-```{r bar-outcome}
+```{r bar-outcome, fig.height=3}
 reviewBar(studies, Outcome, fill = PALETTE[4], width = 0.6)
 ```
 
@@ -69,7 +69,7 @@ reviewBar(studies, Outcome, fill = PALETTE[4], width = 0.6)
 
 If labels are clipped, increase `label_space` (default 1.6):
 
-```{r bar-labelspace}
+```{r bar-labelspace, fig.height=9}
 reviewBar(studies, Country, fill = PALETTE[6], label_space = 2)
 ```
 
@@ -77,12 +77,8 @@ reviewBar(studies, Country, fill = PALETTE[6], label_space = 2)
 
 Each square represents one study occurrence:
 
-```{r waffle-design}
-reviewWaffle(studies, Design)
-```
-
 ```{r waffle-outcome, fig.height = 4}
-reviewWaffle(studies, Outcome, ncol = 6)
+reviewWaffle(studies, Outcome, ncol = 11)
 ```
 
 ## Donut / pie chart
@@ -102,7 +98,7 @@ reviewPie(studies, Design, donut = FALSE)
 `reviewOverlap()` shows how two columns co-occur across studies:
 
 ```{r overlap, fig.height = 4}
-reviewOverlap(studies, Design, Outcome)
+reviewOverlap(studies, Design, Outcome, fill = PALETTE[3])
 ```
 
 ## Alluvial plot
@@ -124,15 +120,15 @@ reviewAlluvial(studies, c("Design", "Outcome"), labels = "prop")
 Show flow counts between strata:
 
 ```{r alluvial-flow, fig.height = 5}
-reviewAlluvial(studies, c("Design", "Outcome"), labels = "count",
+reviewAlluvial(studies, c("Design", "Outcome"), labels = "none",
                flow_labels = TRUE)
 ```
 
 Custom axis labels:
 
 ```{r alluvial-labels, fig.height = 5}
-reviewAlluvial(studies, c("Design", "Outcome"),
-               axis_labels = c("Study Design", "Reported Outcome"))
+reviewAlluvial(studies, c("Design", "Outcome","AgeGroup"),
+               axis_labels = c("Study Design", "Reported Outcome", "Age group"))
 ```
 
 ## Year trend

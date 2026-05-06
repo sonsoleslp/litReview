@@ -4,6 +4,7 @@ Version: 0.1.0
 Authors@R: c(
     person("Sonsoles", "López-Pernas", email = "sonsoles.lopez@uef.fi",
            role = c("aut", "cre")),
+    person("Kamila", "Misiejuk", role = "aut"),
     person("Mohammed", "Saqr", role = "aut")
     )
 Description: Provides functions to summarize and visualize categorical data
@@ -14,7 +15,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-URL: https://github.com/sonsoleslp/litReview
+URL: https://github.com/sonsoleslp/litReview, http://sonsoles.me/litReview/
 BugReports: https://github.com/sonsoleslp/litReview/issues
 Imports:
     cli,

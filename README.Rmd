@@ -15,7 +15,8 @@ knitr::opts_chunk$set(
 )
 ```
 
-# litReview
+# `litReview`: An R package for plotting literature review results <img src="man/figures/logo.png" align="right" height="119" />
+
 
 <!-- badges: start -->
 <!-- badges: end -->
@@ -57,7 +58,7 @@ reviewBar(studies, Design, fill = PALETTE[2], studlabs = TRUE)
 ### Waffle chart
 
 ```{r waffle}
-reviewWaffle(studies, Design)
+reviewWaffle(studies, Design, ncol = 10)
 ```
 
 ### Donut chart
@@ -93,7 +94,7 @@ reviewMap(studies)
 ### Summary table
 
 ```{r table}
-reviewTable(studies, Design)
+reviewTable(studies, Design, study_id = "Author")
 ```
 
 ### Handling missing data

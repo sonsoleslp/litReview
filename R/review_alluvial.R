@@ -18,7 +18,8 @@
 #' @param na_label Character. Label for missing values when `na.rm = FALSE`.
 #'   Defaults to `"Not reported"`.
 #' @param labels Character. What to show on each stratum. One of `"none"`
-#'   (default), `"prop"` (proportion within axis), or `"count"`.
+#'   (default), `"prop"` (proportion within axis), `"count"`, or `"both"`
+#'   (count and proportion).
 #' @param flow_labels Logical. If `TRUE`, show counts on the flows between
 #'   strata. Defaults to `FALSE`.
 #' @param flow_alpha Numeric. Transparency of flows (0--1). Defaults to `0.25`.
@@ -45,7 +46,7 @@
 reviewAlluvial <- function(data, cols, sep = "\r\n", study_id = StudyID,
                            colors = PALETTE, base_size = 12,
                            na.rm = TRUE, na_label = "Not reported",
-                           labels = c("none", "prop", "count"),
+                           labels = c("none", "prop", "count", "both"),
                            flow_labels = FALSE, flow_alpha = 0.25,
                            stratum_width = 0.5, axis_labels = NULL) {
   rlang::check_installed("ggalluvial",
@@ -70,10 +71,9 @@ reviewAlluvial <- function(data, cols, sep = "\r\n", study_id = StudyID,
     plot_data <- handle_na(plot_data, col_name, na.rm = na.rm,
                            na_label = na_label)
   }
-  # After splitting, a single study may have multiple rows — give each a
-
-  # unique alluvium id so every combination traces its own flow.
+  # After splitting, give each row a unique alluvium id
   plot_data$.alluvium <- seq_len(nrow(plot_data))
+  n_alluvia <- nrow(plot_data)
 
   # Convert to lodes (long) form
   axes <- match(cols, names(plot_data))
@@ -86,6 +86,23 @@ reviewAlluvial <- function(data, cols, sep = "\r\n", study_id = StudyID,
     dplyr::mutate(Total = dplyr::n()) |>
     dplyr::ungroup() |>
     dplyr::mutate(Prop = .data$Freq / .data$Total)
+
+  # Pre-compute stratum stats from the data (reliable, not after_stat)
+  stratum_stats <- lodes |>
+    dplyr::group_by(.data$x, .data$stratum) |>
+    dplyr::summarise(s_n = dplyr::n(), .groups = "drop") |>
+    dplyr::group_by(.data$x) |>
+    dplyr::mutate(s_pct = round(.data$s_n / sum(.data$s_n) * 100, 1)) |>
+    dplyr::ungroup()
+  lodes <- dplyr::left_join(lodes, stratum_stats, by = c("x", "stratum"))
+
+  # Build stratum label text
+  lodes$stratum_label <- switch(labels,
+    none  = paste0("<b>", lodes$stratum, "</b>"),
+    count = paste0("<b>", lodes$stratum, "</b><br>", lodes$s_n),
+    prop  = paste0("<b>", lodes$stratum, "</b><br>", lodes$s_pct, "%"),
+    both  = paste0("<b>", lodes$stratum, "</b><br>", lodes$s_n, " (", lodes$s_pct, "%)")
+  )
 
   # Colors
   all_strata <- unique(as.character(lodes$stratum))
@@ -103,6 +120,12 @@ reviewAlluvial <- function(data, cols, sep = "\r\n", study_id = StudyID,
       curve_type = "sine", aes.flow = "backward"
     ) +
     ggalluvial::geom_stratum(width = stratum_width, color = "white") +
+    ggtext::geom_richtext(
+      stat = ggalluvial::StatStratum, fill = "white",
+      ggplot2::aes(label = .data$stratum_label),
+      size = label_size, color = NA, text.colour = "black",
+      lineheight = if (labels == "none") 1 else 0.9
+    ) +
     ggplot2::scale_fill_manual(values = colors) +
     theme_litreview(base_size = base_size) +
     ggplot2::theme(
@@ -112,44 +135,59 @@ reviewAlluvial <- function(data, cols, sep = "\r\n", study_id = StudyID,
       panel.grid   = ggplot2::element_blank()
     )
 
-  # Stratum labels: combine name + optional stat into one centered label
-  # StatStratum computes: n (observation count), prop (within-axis proportion)
-  if (labels == "prop") {
-    p <- p + ggplot2::geom_label(
-      stat = ggalluvial::StatStratum, fill = "white",
-      ggplot2::aes(label = paste0(
-        ggplot2::after_stat(stratum), "\n",
-        round(ggplot2::after_stat(prop) * 100, 1), "%"
-      )),
-      size = label_size, lineheight = 0.9
-    )
-  } else if (labels == "count") {
-    p <- p + ggplot2::geom_label(
-      stat = ggalluvial::StatStratum, fill = "white",
-      ggplot2::aes(label = paste0(
-        ggplot2::after_stat(stratum), "\n",
-        as.integer(ggplot2::after_stat(n))
-      )),
-      size = label_size, lineheight = 0.9
-    )
-  } else {
-    p <- p + ggplot2::geom_label(
-      stat = ggalluvial::StatStratum, fill = "white",
-      ggplot2::aes(label = ggplot2::after_stat(stratum)),
-      size = label_size
-    )
-  }
+  # Flow labels — position using stratum y-ranges from ggplot_build
+  if (flow_labels && length(cols) >= 2) {
+    built <- ggplot2::ggplot_build(p)
+    # Stratum layer is layer 2 (geom_stratum); extract ymin/ymax per stratum
+    stratum_layer <- built$data[[2]]
 
-  # Flow count labels
-  if (flow_labels) {
-    p <- p + ggplot2::geom_text(
-      stat = ggalluvial::StatFlow,
-      ggplot2::aes(
-        hjust = ifelse(ggplot2::after_stat(flow) == "to", 2.75, -1.85),
-        label = ggplot2::after_stat(count)
-      ),
-      size = label_size * 0.8, vjust = "inward"
-    )
+    flow_label_rows <- list()
+    for (i in seq_len(length(cols) - 1)) {
+      from_col <- cols[i]
+      to_col <- cols[i + 1]
+
+      # Count flows between this pair of axes
+      pair <- plot_data |>
+        dplyr::count(.data[[from_col]], .data[[to_col]])
+      names(pair) <- c("from", "to", "n")
+      total_pair <- sum(pair$n)
+      pair$pct <- round(pair$n / total_pair * 100, 1)
+      pair$label <- switch(labels,
+        prop  = paste0(pair$pct, "%"),
+        both  = paste0(pair$n, " (", pair$pct, "%)"),
+        paste0(pair$n)
+      )
+
+      # Get "from" stratum positions from the built data
+      from_strata <- stratum_layer[stratum_layer$x == i, ]
+      from_strata$stratum_name <- levels(lodes$stratum)[from_strata$stratum]
+
+      for (s in seq_len(nrow(from_strata))) {
+        sname <- from_strata$stratum_name[s]
+        symin <- from_strata$ymin[s]
+        symax <- from_strata$ymax[s]
+        sflows <- pair[pair$from == sname, , drop = FALSE]
+        if (nrow(sflows) == 0) next
+        # Stack flows within this stratum proportionally
+        sflows <- sflows[order(sflows$to), ]
+        stotal <- sum(sflows$n)
+        sflows$y_end <- symin + cumsum(sflows$n / stotal) * (symax - symin)
+        sflows$y_start <- c(symin, sflows$y_end[-nrow(sflows)])
+        sflows$y <- (sflows$y_start + sflows$y_end) / 2
+        sflows$x <- i + stratum_width / 2 + 0.02
+        flow_label_rows <- c(flow_label_rows, list(sflows[, c("x", "y", "label")]))
+      }
+    }
+
+    if (length(flow_label_rows) > 0) {
+      flow_final <- do.call(rbind, flow_label_rows)
+      p <- p + ggplot2::geom_text(
+        data = flow_final,
+        ggplot2::aes(x = .data$x, y = .data$y, label = .data$label),
+        size = label_size * 0.6, color = "grey30",
+        inherit.aes = FALSE
+      )
+    }
   }
 
   # Custom axis labels

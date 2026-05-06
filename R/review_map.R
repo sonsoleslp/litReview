@@ -52,7 +52,8 @@ reviewMap <- function(data, country_col = Country, sep = "\r\n",
   )) +
     ggplot2::geom_polygon(color = "grey80", linewidth = border_lw) +
     ggplot2::scale_fill_gradient(
-      low = "#f0f0f0", high = fill, na.value = "grey95",
+      low = lighten_color(fill, 0.8),
+      high = fill, na.value = "#f5f5f5",
       breaks = function(x) seq(floor(min(x, na.rm = TRUE)),
                                 ceiling(max(x, na.rm = TRUE)))
     ) +

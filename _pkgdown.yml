@@ -1,4 +1,4 @@
-url: https://slopezpe.github.io/litReview/
+url: https://sonsoles.me/litReview/
 
 template:
   bootstrap: 5
@@ -18,9 +18,9 @@ template:
     navbar-light-color: "#ffffff"
     navbar-light-hover-color: "#edc948"
     navbar-light-active-color: "#ffffff"
-    link-color: "#f16769"
+    link-color: "#59a14f"
     link-hover-color: "#edc948"
-    code-color: "#59a14f"
+    code-color: "#b07aa1"
     bs-body-bg: "#ffffff"
   structure:
     left: [intro, reference, articles]
