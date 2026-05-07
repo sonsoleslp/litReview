@@ -36,6 +36,7 @@ Suggests:
     rio,
     rmarkdown,
     testthat (>= 3.0.0)
+Config/Needs/website: ggalluvial, ggfittext, treemapify, maps
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 Depends:

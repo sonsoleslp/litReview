@@ -14,6 +14,10 @@ knitr::opts_chunk$set(
   fig.width = 8,
   fig.height = 5
 )
+has_ggalluvial <- requireNamespace("ggalluvial", quietly = TRUE)
+has_treemapify <- requireNamespace("treemapify", quietly = TRUE)
+has_maps       <- requireNamespace("maps", quietly = TRUE)
+has_ggfittext  <- requireNamespace("ggfittext", quietly = TRUE)
 ```
 
 ## Overview
@@ -51,7 +55,7 @@ reviewBar(studies, Design, fill = "#59a14f") +
 
 Set `studlabs = TRUE` to overlay the contributing study IDs on each bar:
 
-```{r bar-studlabs, fig.height = 6}
+```{r bar-studlabs, fig.height = 6, eval = has_ggfittext}
 reviewBar(studies, Design, fill = PALETTE[2], studlabs = TRUE)
 ```
 
@@ -105,26 +109,26 @@ reviewOverlap(studies, Design, Outcome, fill = PALETTE[3])
 multiple columns. Each study traces a path through the strata. Requires the
 `ggalluvial` package.
 
-```{r alluvial, fig.height = 5}
+```{r alluvial, fig.height = 5, eval = has_ggalluvial}
 reviewAlluvial(studies, c("Design", "Outcome"))
 ```
 
 Add proportion or count labels on each stratum:
 
-```{r alluvial-prop, fig.height = 5}
+```{r alluvial-prop, fig.height = 5, eval = has_ggalluvial}
 reviewAlluvial(studies, c("Design", "Outcome"), labels = "prop")
 ```
 
 Show flow counts between strata:
 
-```{r alluvial-flow, fig.height = 5}
+```{r alluvial-flow, fig.height = 5, eval = has_ggalluvial}
 reviewAlluvial(studies, c("Design", "Outcome"), labels = "none",
                flow_labels = TRUE)
 ```
 
 Custom axis labels:
 
-```{r alluvial-labels, fig.height = 5}
+```{r alluvial-labels, fig.height = 5, eval = has_ggalluvial}
 reviewAlluvial(studies, c("Design", "Outcome","AgeGroup"),
                axis_labels = c("Study Design", "Reported Outcome", "Age group"))
 ```
@@ -134,20 +138,20 @@ reviewAlluvial(studies, c("Design", "Outcome","AgeGroup"),
 `reviewTreemap()` displays category frequencies as nested rectangles whose area
 is proportional to the count. Requires the `treemapify` package.
 
-```{r treemap, fig.height = 4}
+```{r treemap, fig.height = 4, eval = has_treemapify}
 reviewTreemap(studies, Design)
 ```
 
 Use `color_by` to add a hierarchical grouping. Here we show interventions
 colored by their higher-order type:
 
-```{r treemap-color, fig.height = 5}
+```{r treemap-color, fig.height = 5, eval = has_treemapify}
 reviewTreemap(studies, Intervention, color_by = InterventionType)
 ```
 
 Show study IDs inside each rectangle:
 
-```{r treemap-studlabs, fig.height = 5}
+```{r treemap-studlabs, fig.height = 5, eval = has_treemapify}
 reviewTreemap(studies, Design, studlabs = TRUE)
 ```
 
@@ -184,7 +188,7 @@ reviewTrend(studies, Design, labels = "studies")
 `reviewMap()` shades countries by the number of studies. Common aliases like
 "United States" or "United Kingdom" are resolved automatically:
 
-```{r map, fig.width = 10, fig.height = 5}
+```{r map, fig.width = 10, fig.height = 5, eval = has_maps}
 reviewMap(studies)
 ```
 
