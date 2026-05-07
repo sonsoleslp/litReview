@@ -10,6 +10,7 @@
 ^data\.xlsx$
 ^data-raw$
 ^utils2\.R$
+^utils3\.R$
 ^README\.html$
 ^README\.knit\.md$
 ^data-raw\/logo\.R$

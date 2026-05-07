@@ -22,6 +22,7 @@ template:
     link-hover-color: "#edc948"
     code-color: "#b07aa1"
     bs-body-bg: "#ffffff"
+    dropdown-link-hover-bg: "#b07aa1"
   structure:
     left: [intro, reference, articles]
     right: [search, github]
@@ -37,6 +38,7 @@ reference:
       - reviewTrend
       - reviewMap
       - reviewAlluvial
+      - reviewTreemap
 
   - title: "Tables"
     desc: "Formatted summary tables"
@@ -57,6 +59,11 @@ reference:
     desc: "Functions for loading data"
     contents:
       - import_from_google_drive
+
+  - title: "Data"
+    desc: "Example dataset"
+    contents:
+      - studies
 
   - title: "Helpers"
     contents:

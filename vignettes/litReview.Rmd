@@ -24,9 +24,7 @@ customize with `+`. Column names can be passed bare or quoted.
 
 ```{r setup}
 library(litReview)
-
-path <- system.file("extdata", "example_studies.xlsx", package = "litReview")
-studies <- rio::import(path)
+data(studies)
 head(studies)
 ```
 
@@ -129,6 +127,28 @@ Custom axis labels:
 ```{r alluvial-labels, fig.height = 5}
 reviewAlluvial(studies, c("Design", "Outcome","AgeGroup"),
                axis_labels = c("Study Design", "Reported Outcome", "Age group"))
+```
+
+## Treemap
+
+`reviewTreemap()` displays category frequencies as nested rectangles whose area
+is proportional to the count. Requires the `treemapify` package.
+
+```{r treemap, fig.height = 4}
+reviewTreemap(studies, Design)
+```
+
+Use `color_by` to add a hierarchical grouping. Here we show interventions
+colored by their higher-order type:
+
+```{r treemap-color, fig.height = 5}
+reviewTreemap(studies, Intervention, color_by = InterventionType)
+```
+
+Show study IDs inside each rectangle:
+
+```{r treemap-studlabs, fig.height = 5}
+reviewTreemap(studies, Design, studlabs = TRUE)
 ```
 
 ## Year trend

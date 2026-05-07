@@ -27,9 +27,7 @@ inclusion in a manuscript. Two arguments control the LaTeX workflow:
 
 ```{r setup}
 library(litReview)
-
-path <- system.file("extdata", "example_studies.xlsx", package = "litReview")
-studies <- rio::import(path)
+data(studies)
 ```
 
 ## Plain LaTeX output
@@ -56,7 +54,7 @@ The `cite` flag also works without `latex = TRUE` if you want a `gt` preview
 of the cited form:
 
 ```{r gt-cite}
-reviewTable(studies, Design, cite = TRUE)
+reviewTable(studies, Design, cite = TRUE, study_id = "bibKey")
 ```
 
 ## Embedding in a LaTeX or R Markdown document

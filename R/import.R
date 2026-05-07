@@ -17,6 +17,9 @@
 #'
 #' @export
 import_from_google_drive <- function(url, sheet) {
+  rlang::check_installed("rio",
+                         reason = "to import Excel files with import_from_google_drive()")
+
   destfile <- tempfile(fileext = ".xlsx")
   on.exit(unlink(destfile), add = TRUE)
 

@@ -69,9 +69,11 @@ reviewTrend <- function(data, col, year_col = Year, sep = "\r\n",
 
   if (labels == "studies") {
     if (!id_name %in% names(data)) {
-      cli::cli_abort(
-        "Study ID column {.val {id_name}} not found. Set {.arg study_id} for {.code labels = \"studies\"}."
-      )
+      cli::cli_abort(c(
+        "Study ID column {.val {id_name}} not found in {.arg data}.",
+        "i" = "Available columns: {.val {names(data)}}.",
+        "i" = "Set {.arg study_id} for {.code labels = \"studies\"}."
+      ))
     }
     study_labels <- expanded |>
       dplyr::group_by(!!year_sym, !!col_sym) |>

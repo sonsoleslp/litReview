@@ -59,9 +59,11 @@ reviewOverlap <- function(data, col1, col2, sep = "\r\n", fill = "#7BB0D1",
 
   if (studlabs) {
     if (!id_name %in% names(data)) {
-      cli::cli_abort(
-        "Study ID column {.val {id_name}} not found. Set {.arg study_id} for {.code studlabs = TRUE}."
-      )
+      cli::cli_abort(c(
+        "Study ID column {.val {id_name}} not found in {.arg data}.",
+        "i" = "Available columns: {.val {names(data)}}.",
+        "i" = "Set {.arg study_id} for {.code studlabs = TRUE}."
+      ))
     }
     study_labels <- expanded |>
       dplyr::group_by(!!col1_sym, !!col2_sym) |>

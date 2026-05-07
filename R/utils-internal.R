@@ -117,13 +117,19 @@ validate_inputs <- function(data, col_name, id_name = NULL) {
   if (nrow(data) == 0L) {
     cli::cli_abort("{.arg data} has 0 rows.")
   }
-  if (!col_name %in% names(data)) {
-    cli::cli_abort("Column {.val {col_name}} not found in {.arg data}.")
+  available <- names(data)
+  if (!col_name %in% available) {
+    cli::cli_abort(c(
+      "Column {.val {col_name}} not found in {.arg data}.",
+      "i" = "Available columns: {.val {available}}."
+    ))
   }
-  if (!is.null(id_name) && !id_name %in% names(data)) {
-    cli::cli_abort(
-      "Study ID column {.val {id_name}} not found in {.arg data}. Set {.arg study_id} to the correct column."
-    )
+  if (!is.null(id_name) && !id_name %in% available) {
+    cli::cli_abort(c(
+      "Study ID column {.val {id_name}} not found in {.arg data}.",
+      "i" = "Available columns: {.val {available}}.",
+      "i" = "Set {.arg study_id} to the correct column."
+    ))
   }
 }
 

@@ -59,9 +59,11 @@ reviewAlluvial <- function(data, cols, sep = "\r\n", study_id = StudyID,
   # Validate
   for (col_name in cols) validate_inputs(data, col_name)
   if (!id_name %in% names(data)) {
-    cli::cli_abort(
-      "Study ID column {.val {id_name}} not found in {.arg data}. Set {.arg study_id}."
-    )
+    cli::cli_abort(c(
+      "Study ID column {.val {id_name}} not found in {.arg data}.",
+      "i" = "Available columns: {.val {names(data)}}.",
+      "i" = "Set {.arg study_id} to the correct column."
+    ))
   }
 
   # Subset, split multi-value cells, and handle NAs
