@@ -26,6 +26,7 @@ Imports:
     rlang,
     tidyr (>= 1.3.0)
 Suggests:
+    bslib (>= 0.5.0),
     ggalluvial,
     ggfittext,
     treemapify,
@@ -35,6 +36,7 @@ Suggests:
     pkgdown,
     rio,
     rmarkdown,
+    shiny (>= 1.7.0),
     testthat (>= 3.0.0)
 Config/Needs/website: ggalluvial, ggfittext, treemapify, maps
 Config/testthat/edition: 3

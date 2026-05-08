@@ -60,6 +60,11 @@ reference:
     contents:
       - import_from_google_drive
 
+  - title: "Shiny App"
+    desc: "Interactive notebook-style app"
+    contents:
+      - run_app
+
   - title: "Data"
     desc: "Example dataset"
     contents:

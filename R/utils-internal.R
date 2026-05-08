@@ -166,6 +166,44 @@ COUNTRY_ALIASES <- c(
   "Turkiye"                = "Turkey"
 )
 
+#' Convert a Google Sheets or Drive URL to an xlsx export URL
+#'
+#' Handles:
+#' - `https://docs.google.com/spreadsheets/d/ID/edit...`
+#' - `https://docs.google.com/spreadsheets/d/ID/...` (any path)
+#' - `https://drive.google.com/file/d/ID/view...`
+#' - `https://drive.google.com/open?id=ID`
+#' - `https://drive.google.com/uc?export=download&id=ID` (already correct)
+#'
+#' Non-Google URLs are returned unchanged.
+#'
+#' @param url Character. A URL string.
+#' @return Character. The export URL, or the original URL if not recognized.
+#' @noRd
+normalise_google_url <- function(url) {
+  # Google Sheets: docs.google.com/spreadsheets/d/ID/...
+  m <- regmatches(url, regexec(
+    "docs\\.google\\.com/spreadsheets/d/([^/]+)", url))[[1]]
+  if (length(m) == 2) {
+    return(paste0("https://docs.google.com/spreadsheets/d/", m[2],
+                  "/export?format=xlsx"))
+  }
+  # Google Drive file: drive.google.com/file/d/ID/...
+
+  m <- regmatches(url, regexec(
+    "drive\\.google\\.com/file/d/([^/]+)", url))[[1]]
+  if (length(m) == 2) {
+    return(paste0("https://drive.google.com/uc?export=download&id=", m[2]))
+  }
+  # Google Drive open: drive.google.com/open?id=ID
+  m <- regmatches(url, regexec(
+    "drive\\.google\\.com/open\\?id=([^&]+)", url))[[1]]
+  if (length(m) == 2) {
+    return(paste0("https://drive.google.com/uc?export=download&id=", m[2]))
+  }
+  url
+}
+
 #' Normalise country names to map_data("world") region names
 #' @param x Character vector of country names.
 #' @return Character vector with aliases resolved.
