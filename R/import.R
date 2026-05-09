@@ -17,7 +17,7 @@
 #'
 #' @export
 import_from_google_drive <- function(url, sheet) {
-  rlang::check_installed("rio",
+  rlang::check_installed("readxl",
                          reason = "to import Excel files with import_from_google_drive()")
 
   url <- normalise_google_url(url)
@@ -25,5 +25,5 @@ import_from_google_drive <- function(url, sheet) {
   on.exit(unlink(destfile), add = TRUE)
 
   utils::download.file(url, destfile, mode = "wb", cacheOK = FALSE)
-  rio::import(destfile, which = sheet)
+  as.data.frame(readxl::read_excel(destfile, sheet = sheet))
 }

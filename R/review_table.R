@@ -23,7 +23,9 @@
 #' @param na_last Logical. If `TRUE`, place the missing-value category last
 #'   regardless of its frequency. Defaults to `FALSE`.
 #'
-#' @return A [gt::gt()] table, or a LaTeX character object if `latex = TRUE`.
+#' @return A [gt::gt()] table, or a LaTeX character string if `latex = TRUE`.
+#'   The LaTeX output prints cleanly in the console, and renders automatically
+#'   in knitr/R Markdown chunks with `results = "asis"`.
 #'
 #' @examples
 #' df <- data.frame(
@@ -63,5 +65,20 @@ reviewTable <- function(data, col, sep = "\r\n", study_id = StudyID,
   if (cite) {
     tbl <- gt::fmt_passthrough(tbl, columns = "Studies", escape = FALSE)
   }
-  if (latex) gt::as_latex(tbl) else tbl
+  if (!latex) return(tbl)
+
+  out <- as.character(gt::as_latex(tbl))
+  class(out) <- c("litreview_latex", "character")
+  out
+}
+
+#' @export
+print.litreview_latex <- function(x, ...) {
+  cat(x, "\n")
+  invisible(x)
+}
+
+#' @export
+knit_print.litreview_latex <- function(x, ...) {
+  knitr::asis_output(x)
 }

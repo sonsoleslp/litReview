@@ -101,9 +101,16 @@ reviewTreemap(studies, Intervention, color_by = InterventionType)
 
 ### Summary table
 
-```{r table}
+```{r table, echo=FALSE, message=FALSE}
+tbl <- reviewTable(studies, Design, study_id = "Author")
+gt::gtsave(tbl, file = "man/figures/README-table-1.png")
+```
+
+```r
 reviewTable(studies, Design, study_id = "Author")
 ```
+
+<img src="man/figures/README-table-1.png" width="100%" />
 
 ### Handling missing data
 

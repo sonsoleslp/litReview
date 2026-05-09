@@ -354,31 +354,11 @@ server <- function(input, output, session) {
   edit_observers   <- reactiveValues()
   restoring        <- reactiveVal(FALSE)  # flag to suppress save during restore
 
-  # -- Action buttons (change based on editing state) -------------------------
+  # -- Action button -----------------------------------------------------------
   output$action_buttons <- renderUI({
-    eid <- editing_id()
-    if (is.null(eid)) {
-      actionButton("add_plot", "Add Plot",
-                   class = "btn-primary w-100", icon = icon("plus-circle"))
-    } else {
-      tagList(
-        actionButton("done_edit", "Done Editing",
-                     class = "btn-success w-100", icon = icon("check")),
-        actionButton("cancel_edit", "Cancel",
-                     class = "btn-outline-secondary w-100 mt-1",
-                     icon = icon("xmark")))
-    }
+    actionButton("add_plot", "Add Plot",
+                 class = "btn-primary w-100", icon = icon("plus-circle"))
   })
-
-  observeEvent(input$cancel_edit, {
-    eid <- editing_id()
-    if (!is.null(eid)) {
-      entry <- Find(function(e) e$id == eid, notebook$plots)
-      if (!is.null(entry)) restore_params(entry$params)
-    }
-    editing_id(NULL)
-  })
-  observeEvent(input$done_edit, { editing_id(NULL) })
 
   # -- Data loading -----------------------------------------------------------
   observeEvent(input$file_upload, {
@@ -389,8 +369,8 @@ server <- function(input, output, session) {
         utils::read.delim(input$file_upload$datapath, stringsAsFactors = FALSE,
                           check.names = FALSE, sep = if (ext == "csv") "," else "\t")
       } else {
-        rlang::check_installed("rio", reason = "to import Excel files")
-        rio::import(input$file_upload$datapath)
+        rlang::check_installed("readxl", reason = "to import Excel files")
+        as.data.frame(readxl::read_excel(input$file_upload$datapath))
       }
       loaded_data(df)
       showNotification(paste("Loaded", nrow(df), "rows,", ncol(df), "columns"),
@@ -571,7 +551,7 @@ server <- function(input, output, session) {
 
   current_plot_d <- current_plot |> debounce(400)
 
-  # -- Live update: push changes to the card being edited ----------------------
+  # -- Live update: push changes to the active card + scroll to it -------------
   observe({
     eid <- editing_id(); req(eid)
     result <- current_plot_d(); req(result)
@@ -588,6 +568,13 @@ server <- function(input, output, session) {
         e$is_gt <- inherits(result, "gt_tbl"); e$params <- params
       }; e
     })
+    # Scroll to the active card
+    shiny::insertUI(selector = "body", where = "beforeEnd", immediate = TRUE,
+      ui = tags$script(sprintf(
+        "setTimeout(function(){
+           var el = document.getElementById('card_%d');
+           if(el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+         }, 100);", eid)))
   })
 
   # -- Helper: set up per-card observers --------------------------------------
@@ -604,10 +591,11 @@ server <- function(input, output, session) {
       }, ignoreInit = TRUE)
   }
 
-  # -- Add new plot ------------------------------------------------------------
+  # -- Add new plot (creates card + enters edit mode) --------------------------
   observeEvent(input$add_plot, {
     req(loaded_data())
     result <- current_plot(); req(result)
+
     typ <- input$plot_type
     col_label <- switch(typ,
       "Overlap"  = paste(input$col1, "vs", input$col2),
@@ -621,6 +609,10 @@ server <- function(input, output, session) {
                   is_gt = inherits(result, "gt_tbl"), params = params)
     notebook$plots <- c(notebook$plots, list(entry))
     setup_card_observers(id)
+
+    # Immediately enter edit mode on the new card
+    editing_id(id)
+
     nav_select("main_tabs", "Notebook")
     shiny::insertUI(selector = "body", where = "beforeEnd", immediate = TRUE,
       ui = tags$script(sprintf(

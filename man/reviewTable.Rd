@@ -47,7 +47,9 @@ denominator? Defaults to \code{TRUE}.}
 regardless of its frequency. Defaults to \code{FALSE}.}
 }
 \value{
-A \code{\link[gt:gt]{gt::gt()}} table, or a LaTeX character object if \code{latex = TRUE}.
+A \code{\link[gt:gt]{gt::gt()}} table, or a LaTeX character string if \code{latex = TRUE}.
+The LaTeX output prints cleanly in the console, and renders automatically
+in knitr/R Markdown chunks with \code{results = "asis"}.
 }
 \description{
 Summarizes a column from literature review data and returns a formatted

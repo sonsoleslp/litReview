@@ -30,11 +30,9 @@ Suggests:
     ggalluvial,
     ggfittext,
     treemapify,
-    grid,
     maps,
     knitr,
-    pkgdown,
-    rio,
+    readxl,
     rmarkdown,
     shiny (>= 1.7.0),
     testthat (>= 3.0.0)

@@ -186,7 +186,8 @@ reviewTrend(studies, Design, labels = "studies")
 ## World map
 
 `reviewMap()` shades countries by the number of studies. Common aliases like
-"United States" or "United Kingdom" are resolved automatically:
+"United States" or "United Kingdom" are resolved automatically.
+Requires the `maps` package (`install.packages("maps")`):
 
 ```{r map, fig.width = 10, fig.height = 5, eval = has_maps}
 reviewMap(studies)

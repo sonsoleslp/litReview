@@ -133,21 +133,12 @@ reviewTreemap <- function(data, col, color_by = NULL, sep = "\r\n",
 
   # Optional study labels below the category name
   if (studlabs) {
-    if (has_color) {
-      p <- p + treemapify::geom_treemap_text(
-        ggplot2::aes(label = .data$Studies),
-        colour = "grey30", size = sub_size * 2,
-        min.size = 1, reflow = TRUE, place = "bottom",
-        padding.y = grid::unit(base_size * 0.3, "mm")
-      )
-    } else {
-      p <- p + treemapify::geom_treemap_text(
-        ggplot2::aes(label = .data$Studies),
-        colour = "grey30", size = sub_size * 2,
-        min.size = 1, reflow = TRUE, place = "centre",
-        padding.y = grid::unit(base_size * 1.2, "mm")
-      )
-    }
+    p <- p + treemapify::geom_treemap_text(
+      ggplot2::aes(label = .data$Studies),
+      colour = "grey30", size = sub_size * 2,
+      min.size = 1, reflow = TRUE, place = "bottom",
+      padding.y = grid::unit(base_size * 0.3, "mm")
+    )
   }
 
   p + theme_litreview(base_size = base_size)

@@ -87,7 +87,7 @@ reviewTrend <- function(data, col, year_col = Year, sep = "\r\n",
     count   = as.character(counts$n),
     percent = paste0(counts$pct, "%"),
     both    = paste0(counts$n, " (", counts$pct, "%)"),
-    studies = counts$study_label
+    studies = gsub(", ", "\n", counts$study_label)
   )
 
   n_cats <- length(unique(counts[[col_name]]))
@@ -104,11 +104,13 @@ reviewTrend <- function(data, col, year_col = Year, sep = "\r\n",
     ggplot2::labs(x = year_name, y = "Number of studies", fill = col_name)
 
   if (labels != "none") {
+    lh <- if (labels == "studies") 0.8 else 1
+    sz <- if (labels == "studies") label_size * 0.8 else label_size
     p <- p +
       ggplot2::geom_text(
         ggplot2::aes(label = .data$bar_label),
         position = ggplot2::position_stack(vjust = 0.5),
-        size = label_size, color = "black"
+        size = sz, lineheight = lh, color = "black"
       )
   }
 
