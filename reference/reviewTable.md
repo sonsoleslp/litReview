@@ -76,7 +76,9 @@ reviewTable(
 ## Value
 
 A [`gt::gt()`](https://gt.rstudio.com/reference/gt.html) table, or a
-LaTeX character object if `latex = TRUE`.
+LaTeX character string if `latex = TRUE`. The LaTeX output prints
+cleanly in the console, and renders automatically in knitr/R Markdown
+chunks with `results = "asis"`.
 
 ## Examples
 

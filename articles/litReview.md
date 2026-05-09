@@ -277,7 +277,8 @@ reviewTrend(studies, Design, labels = "studies")
 
 [`reviewMap()`](https://sonsoles.me/litReview/reference/reviewMap.md)
 shades countries by the number of studies. Common aliases like “United
-States” or “United Kingdom” are resolved automatically:
+States” or “United Kingdom” are resolved automatically. Requires the
+`maps` package (`install.packages("maps")`):
 
 ``` r
 

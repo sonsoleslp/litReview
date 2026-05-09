@@ -49,6 +49,13 @@ Functions for loading data
 - [`import_from_google_drive()`](https://sonsoles.me/litReview/reference/import_from_google_drive.md)
   : Import Data from a Google Drive URL
 
+## Shiny App
+
+Interactive notebook-style app
+
+- [`run_app()`](https://sonsoles.me/litReview/reference/run_app.md) :
+  Launch the litReview Shiny App
+
 ## Data
 
 Example dataset

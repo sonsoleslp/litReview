@@ -72,8 +72,8 @@ summary table for inclusion in a manuscript. Two arguments control the
 LaTeX workflow:</p>
 <ul>
 <li>
-<code>latex = TRUE</code> returns the table as LaTeX code via
-<code><a href="https://gt.rstudio.com/reference/as_latex.html" class="external-link">gt::as_latex()</a></code> instead of a <code>gt</code> object.</li>
+<code>latex = TRUE</code> returns the table as LaTeX code instead of
+a <code>gt</code> object.</li>
 <li>
 <code>cite = TRUE</code> treats values in the study ID column as
 BibTeX reference keys and wraps each row’s study list in
@@ -87,9 +87,7 @@ is compiled.</li>
 <div class="section level2">
 <h2 id="plain-latex-output">Plain LaTeX output<a class="anchor" aria-label="anchor" href="#plain-latex-output"></a>
 </h2>
-<p>Pass <code>latex = TRUE</code> to get LaTeX code you can paste into a
-<code>.tex</code> document or print inside an R Markdown chunk with
-<code>results = "asis"</code>:</p>
+<p>Pass <code>latex = TRUE</code> to get LaTeX code:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/reviewTable.html">reviewTable</a></span><span class="op">(</span><span class="va">studies</span>, <span class="va">Design</span>, latex <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -607,15 +605,11 @@ cited form:</p>
 <div class="section level2">
 <h2 id="embedding-in-a-latex-or-r-markdown-document">Embedding in a LaTeX or R Markdown document<a class="anchor" aria-label="anchor" href="#embedding-in-a-latex-or-r-markdown-document"></a>
 </h2>
-<p>In an <code>.Rnw</code> (Sweave) or LaTeX-output R Markdown file,
-print the result with <code>results = "asis"</code> so the LaTeX code is
-emitted verbatim:</p>
-<pre><code>
-``` r
-reviewTable(studies, Design, latex = TRUE, cite = TRUE)
-```
-
-\begin{table}[t]
+<p>In an <code>.Rnw</code> (Sweave) or LaTeX-output R Markdown file, use
+<code>results = "asis"</code> so the LaTeX code is emitted verbatim:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/reviewTable.html">reviewTable</a></span><span class="op">(</span><span class="va">studies</span>, <span class="va">Design</span>, latex <span class="op">=</span> <span class="cn">TRUE</span>, cite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<pre><code>\begin{table}[t]
 \fontsize{12.0pt}{14.0pt}\selectfont
 \begin{tabular*}{\linewidth}{@{\extracolsep{\fill}}llrr}
 \toprule
@@ -629,8 +623,7 @@ Cohort &amp; \cite{S02,S12,S15,S16,S25,S26,S29,S31,S40,S41,S46,S47} &amp; 12 &am
 Case-control &amp; \cite{S13,S23,S27,S36} &amp; 4 &amp; 8\% \\ 
 \bottomrule
 \end{tabular*}
-\end{table}
-</code></pre>
+\end{table}</code></pre>
 <p>Make sure your preamble loads a citation package
 (e.g. <code>\usepackage{natbib}</code> or
 <code>\usepackage{biblatex}</code>) and that the keys used in
@@ -641,7 +634,7 @@ Case-control &amp; \cite{S13,S23,S27,S36} &amp; 4 &amp; 8\% \\
 </h2>
 <p>If your study IDs live in a column other than <code>StudyID</code>,
 pass it via <code>study_id</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  RefKey <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"smith2020"</span>, <span class="st">"doe2019"</span>, <span class="st">"lee2021"</span>, <span class="st">"smith2020"</span><span class="op">)</span>,</span>
 <span>  Design <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"RCT"</span>, <span class="st">"Cohort"</span>, <span class="st">"RCT"</span>, <span class="st">"Case-control"</span><span class="op">)</span>,</span>

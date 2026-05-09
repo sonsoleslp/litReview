@@ -122,14 +122,7 @@ reviewTreemap(studies, Intervention, color_by = InterventionType)
 reviewTable(studies, Design, study_id = "Author")
 ```
 
-| Design | Studies | Frequency | Percent |
-|----|----|----|----|
-| RCT | Kim et al., Brown et al., Johansson et al., Santos et al., Park et al., Dubois et al., Tanaka et al., Nguyen et al., Takahashi et al., Reyes et al., Larsen et al. | 11 | 22% |
-| Qualitative | Garcia et al., Mueller et al., Novak et al., Petrov et al., Schmidt et al., Eriksson et al., Popov et al., Torres et al., Sato et al. | 9 | 18% |
-| Mixed methods | Johnson et al., Berg et al. | 2 | 4% |
-| Cross-sectional | Patel et al., Silva et al., Ahmed et al., Taylor et al., Rossi et al., Okafor et al., Hassan et al., Olsen et al., Khan et al., Fischer et al., Nakamura et al., Kowalski et al. | 12 | 24% |
-| Cohort | Chen et al., Yamamoto et al., Martinez et al., Li et al., Gupta et al., OBrien et al., Ivanov et al., Costa et al., Muller et al., Ali et al., Diaz et al., Suzuki et al. | 12 | 24% |
-| Case-control | Andersen et al., Williams et al., Fernandez et al., Morales et al. | 4 | 8% |
+![](reference/figures/README-table-1.png)
 
 ### Handling missing data
 
@@ -195,6 +188,13 @@ Functions for loading data
 
 - [`import_from_google_drive()`](https://sonsoles.me/litReview/reference/import_from_google_drive.md)
   : Import Data from a Google Drive URL
+
+## Shiny App
+
+Interactive notebook-style app
+
+- [`run_app()`](https://sonsoles.me/litReview/reference/run_app.md) :
+  Launch the litReview Shiny App
 
 ## Data
 

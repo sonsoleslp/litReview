@@ -6,9 +6,8 @@
 can return a LaTeX representation of the summary table for inclusion in
 a manuscript. Two arguments control the LaTeX workflow:
 
-- `latex = TRUE` returns the table as LaTeX code via
-  [`gt::as_latex()`](https://gt.rstudio.com/reference/as_latex.html)
-  instead of a `gt` object.
+- `latex = TRUE` returns the table as LaTeX code instead of a `gt`
+  object.
 - `cite = TRUE` treats values in the study ID column as BibTeX reference
   keys and wraps each row’s study list in `\cite{...}`, so citations
   render correctly when the document is compiled.
@@ -21,8 +20,7 @@ data(studies)
 
 ## Plain LaTeX output
 
-Pass `latex = TRUE` to get LaTeX code you can paste into a `.tex`
-document or print inside an R Markdown chunk with `results = "asis"`:
+Pass `latex = TRUE` to get LaTeX code:
 
 ``` r
 
@@ -59,13 +57,13 @@ reviewTable(studies, Design, cite = TRUE, study_id = "bibKey")
 
 ## Embedding in a LaTeX or R Markdown document
 
-In an `.Rnw` (Sweave) or LaTeX-output R Markdown file, print the result
-with `results = "asis"` so the LaTeX code is emitted verbatim:
+In an `.Rnw` (Sweave) or LaTeX-output R Markdown file, use
+`results = "asis"` so the LaTeX code is emitted verbatim:
 
+``` r
 
-    ``` r
-    reviewTable(studies, Design, latex = TRUE, cite = TRUE)
-    ```
+reviewTable(studies, Design, latex = TRUE, cite = TRUE)
+```
 
     \begin{table}[t]
     \fontsize{12.0pt}{14.0pt}\selectfont
