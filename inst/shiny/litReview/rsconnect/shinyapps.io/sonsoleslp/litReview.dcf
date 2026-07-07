@@ -1,0 +1,12 @@
+name: litReview
+title: litReview
+username: sonsoleslp
+account: sonsoleslp
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17327365
+bundleId: 11972079
+url: https://sonsoleslp.shinyapps.io/litReview/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

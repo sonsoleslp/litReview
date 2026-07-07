@@ -9,7 +9,7 @@ has_maps       <- requireNamespace("maps",       quietly = TRUE)
 has_ggfittext  <- requireNamespace("ggfittext",  quietly = TRUE)
 has_rio        <- requireNamespace("rio",         quietly = TRUE)
 
-plot_choices <- c("Bar", "Waffle", "Pie/Donut", "Overlap", "Trend", "Table")
+plot_choices <- c("Bar", "Histogram", "Waffle", "Pie/Donut", "Overlap", "Trend", "Table")
 if (has_maps)       plot_choices <- c(plot_choices, "Map")
 if (has_ggalluvial) plot_choices <- c(plot_choices, "Alluvial")
 if (has_treemapify) plot_choices <- c(plot_choices, "Treemap")
@@ -19,7 +19,33 @@ app_theme <- bs_theme(
   success = "#59a14f", info = "#b07aa1", warning = "#edc948", danger = "#f16769"
 )
 
-palette_choices <- stats::setNames(PALETTE, paste0(PALETTE, " \u25A0"))
+palette_choices <- stats::setNames(PALETTE, PALETTE)
+
+# selectizeInput with a real colored swatch beside each choice.
+# Values starting with "#" are treated as the swatch color; other values
+# (e.g. "custom") get a neutral gray swatch.
+palette_selectize <- function(inputId, label, choices, selected = NULL) {
+  render_js <- "{
+    option: function(item, escape) {
+      var v = item.value || '';
+      var c = (v.charAt(0) === '#') ? v : '#eee';
+      return '<div style=\"display:flex;align-items:center;gap:8px;padding:4px 10px;\">'
+        + '<span style=\"display:inline-block;width:14px;height:14px;flex:none;'
+        + 'background:' + escape(c) + ';border:1px solid #ccc;\"></span>'
+        + '<span>' + escape(item.label) + '</span></div>';
+    },
+    item: function(item, escape) {
+      var v = item.value || '';
+      var c = (v.charAt(0) === '#') ? v : '#eee';
+      return '<div style=\"display:flex;align-items:center;gap:8px;padding-left:2px;\">'
+        + '<span style=\"display:inline-block;width:14px;height:14px;flex:none;'
+        + 'background:' + escape(c) + ';border:1px solid #ccc;\"></span>'
+        + '<span>' + escape(item.label) + '</span></div>';
+    }
+  }"
+  selectizeInput(inputId, label, choices = choices, selected = selected,
+                 options = list(render = I(render_js)))
+}
 
 # -- Build a plot from an explicit params list (no input$ dependency) ----------
 build_plot_from_params <- function(df, p) {
@@ -40,6 +66,14 @@ build_plot_from_params <- function(df, p) {
         width = p$bar_width %||% 0.6, sep = sep, studlabs = sl, study_id = !!sid,
         label_space = p$label_space %||% 1.6, base_size = bs, na.rm = na_rm,
         na_label = na_lab, na_in_percent = na_pct, na_last = na_lst))
+    },
+    "Histogram" = {
+      fb <- if (!is.null(p$fill_by_hist) && nzchar(p$fill_by_hist)) rlang::sym(p$fill_by_hist) else NULL
+      fill <- p$fill_hist %||% "#7BB0D1"
+      bw <- if (!is.null(p$binwidth_hist) && p$binwidth_hist > 0) p$binwidth_hist else NULL
+      rlang::inject(reviewHistogram(df, !!rlang::sym(p$col), fill_by = !!fb,
+        bins = p$bins_hist %||% 30, binwidth = bw, fill = fill, sep = sep,
+        base_size = bs, na.rm = na_rm, na_label = na_lab))
     },
     "Waffle" = rlang::inject(
       reviewWaffle(df, !!rlang::sym(p$col), sep = sep,
@@ -108,6 +142,14 @@ Shiny.addCustomMessageHandler('set_plot_type', function(val) {
 Shiny.addCustomMessageHandler('clear_state', function(msg) {
   localStorage.removeItem('litReview_state');
 });
+// Click anywhere on a plot card to enter edit mode (except on buttons/inputs).
+$(document).on('click', 'div.card[id^=\"card_\"]', function(e) {
+  var $t = $(e.target);
+  if ($t.closest('button, a, input, select, textarea, label').length) return;
+  if ($(this).hasClass('litr-editing')) return;
+  var id = this.id.substring(5);
+  Shiny.setInputValue('edit_' + id, +new Date(), {priority: 'event'});
+});
 "
 
 # =============================================================================
@@ -122,7 +164,14 @@ ui <- page_sidebar(
       "div.shiny-plot-output { height: auto !important; }
        #plot_type_btns { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 4px; }
        #plot_type_btns .btn { min-width: 0; padding: 8px 4px; font-size: 1.2em; }
-       #plot_type_btns .btn.active { background-color: var(--bs-primary); color: #fff; }"
+       #plot_type_btns .btn:hover { background-color: #fff7ca; color: inherit; }
+       #plot_type_btns .btn.active,
+       #plot_type_btns .btn.active:hover { background-color: var(--bs-primary); border-color: var(--bs-primary); color: #fff; }
+       div.card[id^='card_'] { cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
+       div.card[id^='card_']:hover:not(.litr-editing) { box-shadow: 0 0 0 2px var(--bs-primary); }
+       div.card[id^='card_'] button, div.card[id^='card_'] a,
+       div.card[id^='card_'] input, div.card[id^='card_'] select,
+       div.card[id^='card_'] label { cursor: auto; }"
     ))
   ),
 
@@ -138,9 +187,12 @@ ui <- page_sidebar(
         tags$hr(),
         tags$p("Or load from URL:", class = "text-muted small"),
         textInput("url_input", NULL, placeholder = "https://..."),
-        numericInput("sheet_input", "Sheet", value = 1, min = 1, step = 1),
         actionButton("load_url", "Load URL",
                      class = "btn-sm btn-outline-primary", icon = icon("globe")),
+        tags$hr(),
+        numericInput("sheet_input",
+                     "Sheet (Excel / Google Sheets)",
+                     value = 1, min = 1, step = 1),
         tags$hr(),
         actionLink("use_example", "Use example dataset", icon = icon("table"))
       ),
@@ -171,6 +223,15 @@ ui <- page_sidebar(
               '<text x="24" y="7.5" font-size="4" fill="#333">3</text>',
               '<text x="18" y="15.5" font-size="4" fill="#333">2</text>',
               '<text x="30" y="23.5" font-size="4" fill="#333">5</text>')),
+            # Histogram: adjacent vertical bars (no gaps)
+            pt_btn("pt_Histogram", "Histogram", s(
+              sprintf('<rect x="2"  y="20" width="4" height="6"  fill="%s"/>', pal[1]),
+              sprintf('<rect x="6"  y="14" width="4" height="12" fill="%s"/>', pal[1]),
+              sprintf('<rect x="10" y="6"  width="4" height="20" fill="%s"/>', pal[1]),
+              sprintf('<rect x="14" y="10" width="4" height="16" fill="%s"/>', pal[1]),
+              sprintf('<rect x="18" y="16" width="4" height="10" fill="%s"/>', pal[1]),
+              sprintf('<rect x="22" y="22" width="4" height="4"  fill="%s"/>', pal[1]),
+              '<line x1="1" y1="27" x2="30" y2="27" stroke="#999" stroke-width="0.5"/>')),
             # Waffle: grid of colored squares
             pt_btn("pt_Waffle", "Waffle", s(
               sprintf('<rect x="2" y="2" width="6" height="6" rx="1" fill="%s"/>', pal[1]),
@@ -190,15 +251,15 @@ ui <- page_sidebar(
               '<circle cx="16" cy="14" r="5" fill="white"/>')),
             # Overlap: heatmap tiles
             pt_btn("pt_Overlap", "Overlap", s(
-              sprintf('<rect x="2" y="2" width="9" height="9" fill="%s" opacity="0.3"/>', pal[7]),
-              sprintf('<rect x="12" y="2" width="9" height="9" fill="%s" opacity="0.7"/>', pal[7]),
-              sprintf('<rect x="22" y="2" width="9" height="9" fill="%s"/>', pal[7]),
-              sprintf('<rect x="2" y="12" width="9" height="9" fill="%s" opacity="0.7"/>', pal[7]),
-              sprintf('<rect x="12" y="12" width="9" height="9" fill="%s" opacity="0.3"/>', pal[7]),
-              sprintf('<rect x="22" y="12" width="9" height="9" fill="%s" opacity="0.5"/>', pal[7]),
-              sprintf('<rect x="2" y="22" width="9" height="9" fill="%s" opacity="0.5"/>', pal[7]),
-              sprintf('<rect x="12" y="22" width="9" height="9" fill="%s"/>', pal[7]),
-              sprintf('<rect x="22" y="22" width="9" height="9" fill="%s" opacity="0.3"/>', pal[7]))),
+              sprintf('<rect x="2" y="2" width="9" height="9" fill="%s" opacity="0.3"/>', pal[4]),
+              sprintf('<rect x="12" y="2" width="9" height="9" fill="%s" opacity="0.7"/>', pal[4]),
+              sprintf('<rect x="22" y="2" width="9" height="9" fill="%s"/>', pal[4]),
+              sprintf('<rect x="2" y="12" width="9" height="9" fill="%s" opacity="0.7"/>', pal[4]),
+              sprintf('<rect x="12" y="12" width="9" height="9" fill="%s" opacity="0.3"/>', pal[4]),
+              sprintf('<rect x="22" y="12" width="9" height="9" fill="%s" opacity="0.5"/>', pal[4]),
+              sprintf('<rect x="2" y="22" width="9" height="9" fill="%s" opacity="0.5"/>', pal[4]),
+              sprintf('<rect x="12" y="22" width="9" height="9" fill="%s"/>', pal[4]),
+              sprintf('<rect x="22" y="22" width="9" height="9" fill="%s" opacity="0.3"/>', pal[4]))),
             # Trend: stacked bars by year
             pt_btn("pt_Trend", "Trend", s(
               sprintf('<rect x="3" y="16" width="7" height="10" fill="%s"/>', pal[1]),
@@ -275,28 +336,36 @@ ui <- page_sidebar(
           selected = "\r\n"),
 
         conditionalPanel("input.plot_type === 'Bar'",
-          selectInput("fill_bar", "Fill color",
-                      choices = c(palette_choices, "Custom" = "custom")),
+          palette_selectize("fill_bar", "Fill color",
+                            choices = c(palette_choices, "Custom" = "custom")),
           conditionalPanel("input.fill_bar === 'custom'",
             textInput("fill_bar_custom", NULL, value = "#7BB0D1",
                       placeholder = "#hex")),
           sliderInput("bar_width", "Bar width", 0.1, 1, 0.6, 0.05),
           sliderInput("label_space", "Label space", 1, 3, 1.6, 0.1),
           if (has_ggfittext) checkboxInput("studlabs_bar", "Show study labels", FALSE)),
+        conditionalPanel("input.plot_type === 'Histogram'",
+          selectInput("fill_by_hist", "Stack by (optional)", choices = NULL),
+          conditionalPanel("!input.fill_by_hist",
+            palette_selectize("fill_hist", "Fill color",
+                              choices = palette_choices, selected = "#7BB0D1")),
+          numericInput("bins_hist", "Number of bins", value = 30, min = 2, max = 200, step = 1),
+          numericInput("binwidth_hist", "Bin width (optional, overrides bins)",
+                       value = NA, min = 0, step = 1)),
         conditionalPanel("input.plot_type === 'Pie/Donut'",
           checkboxInput("donut", "Donut style", TRUE)),
         conditionalPanel("input.plot_type === 'Waffle'",
           numericInput("ncol_waffle", "Grid columns", 5, min = 1, max = 30)),
         conditionalPanel("input.plot_type === 'Overlap'",
-          selectInput("fill_overlap", "High color",
-                      choices = palette_choices, selected = PALETTE[7]),
+          palette_selectize("fill_overlap", "High color",
+                            choices = palette_choices, selected = PALETTE[7]),
           checkboxInput("studlabs_overlap", "Study labels in tiles", FALSE)),
         conditionalPanel("input.plot_type === 'Trend'",
           selectInput("trend_labels", "Bar labels",
                       choices = c("none", "count", "percent", "both", "studies"))),
         conditionalPanel("input.plot_type === 'Map'",
-          selectInput("fill_map", "High color",
-                      choices = palette_choices, selected = PALETTE[7])),
+          palette_selectize("fill_map", "High color",
+                            choices = palette_choices, selected = PALETTE[7])),
         conditionalPanel("input.plot_type === 'Treemap'",
           selectInput("color_by", "Color by (optional)", choices = NULL),
           checkboxInput("studlabs_treemap", "Show study labels", FALSE)),
@@ -305,10 +374,7 @@ ui <- page_sidebar(
                       choices = c("none", "prop", "count", "both")),
           checkboxInput("flow_labels", "Show flow labels", FALSE),
           sliderInput("flow_alpha", "Flow transparency", 0, 1, 0.25, 0.05),
-          sliderInput("stratum_width", "Stratum width", 0.1, 1, 0.5, 0.05)),
-
-        tags$hr(),
-        uiOutput("action_buttons")
+          sliderInput("stratum_width", "Stratum width", 0.1, 1, 0.5, 0.05))
       ),
 
       # -- Appearance & NA -------------------------------------------------------
@@ -328,6 +394,10 @@ ui <- page_sidebar(
   # -- Main panel --------------------------------------------------------------
   navset_card_tab(id = "main_tabs",
     nav_panel("Notebook", icon = icon("book"),
+      tags$div(class = "mb-3",
+        actionButton("add_plot", "Add Plot",
+                     class = "btn-primary btn-lg w-100",
+                     icon = icon("plus-circle"))),
       uiOutput("notebook_ui"),
       tags$div(class = "mt-3 mb-3 d-flex gap-2 flex-wrap",
         downloadButton("download_all", "Download All (ZIP)",
@@ -353,28 +423,31 @@ server <- function(input, output, session) {
   delete_observers <- reactiveValues()
   edit_observers   <- reactiveValues()
   restoring        <- reactiveVal(FALSE)  # flag to suppress save during restore
-
-  # -- Action button -----------------------------------------------------------
-  output$action_buttons <- renderUI({
-    actionButton("add_plot", "Add Plot",
-                 class = "btn-primary w-100", icon = icon("plus-circle"))
-  })
+  pending_data_refresh <- reactiveVal(FALSE)  # refresh plots on next Notebook visit
 
   # -- Data loading -----------------------------------------------------------
-  observeEvent(input$file_upload, {
-    req(input$file_upload)
-    ext <- tolower(tools::file_ext(input$file_upload$name))
+  # Re-read the uploaded file whenever the file itself OR (for Excel) the
+  # selected sheet number changes.
+  observe({
+    fu <- input$file_upload
+    req(fu)
+    ext <- tolower(tools::file_ext(fu$name))
+    is_excel <- !(ext %in% c("csv", "tsv", "txt"))
+    sheet <- if (is_excel) max(1L, as.integer(input$sheet_input %||% 1L)) else 1L
     tryCatch({
-      df <- if (ext %in% c("csv", "tsv", "txt")) {
-        utils::read.delim(input$file_upload$datapath, stringsAsFactors = FALSE,
-                          check.names = FALSE, sep = if (ext == "csv") "," else "\t")
-      } else {
+      df <- if (is_excel) {
         rlang::check_installed("readxl", reason = "to import Excel files")
-        as.data.frame(readxl::read_excel(input$file_upload$datapath))
+        as.data.frame(readxl::read_excel(fu$datapath, sheet = sheet))
+      } else {
+        utils::read.delim(fu$datapath, stringsAsFactors = FALSE,
+                          check.names = FALSE,
+                          sep = if (ext == "csv") "," else "\t")
       }
       loaded_data(df)
-      showNotification(paste("Loaded", nrow(df), "rows,", ncol(df), "columns"),
-                       type = "message")
+      showNotification(
+        paste0("Loaded ", nrow(df), " rows, ", ncol(df), " columns",
+               if (is_excel) paste0(" (sheet ", sheet, ")") else ""),
+        type = "message")
     }, error = function(e) {
       showNotification(paste("Error:", e$message), type = "error", duration = 10)
     })
@@ -397,6 +470,55 @@ server <- function(input, output, session) {
     showNotification("Loaded example dataset (50 studies)", type = "message")
   })
 
+  # -- Refresh existing plots when the data changes ---------------------------
+  # For each plot in the notebook, check that every column its params reference
+  # is present in the new data. If so, rebuild the plot with the new data;
+  # otherwise remove the card.
+  cols_required_by <- function(p) {
+    needed <- character()
+    if (!is.null(p$study_id)) needed <- c(needed, p$study_id)
+    switch(p$plot_type %||% "",
+      "Bar" =, "Waffle" =, "Pie/Donut" =, "Trend" =, "Treemap" =,
+      "Table" =, "Histogram" = { needed <- c(needed, p$col) },
+      "Overlap"  = { needed <- c(needed, p$col1, p$col2) },
+      "Alluvial" = { needed <- c(needed, p$cols) },
+      "Map"      = { needed <- c(needed, p$country_col) })
+    if (identical(p$plot_type, "Trend"))
+      needed <- c(needed, p$year_col)
+    if (identical(p$plot_type, "Treemap") && nzchar(p$color_by %||% ""))
+      needed <- c(needed, p$color_by)
+    if (identical(p$plot_type, "Histogram") && nzchar(p$fill_by_hist %||% ""))
+      needed <- c(needed, p$fill_by_hist)
+    unique(needed[nzchar(needed)])
+  }
+
+  refresh_plots_for_new_data <- function(df) {
+    if (length(notebook$plots) == 0L) return(invisible())
+    new_cols <- names(df)
+    kept <- list()
+    removed <- integer()
+    for (entry in notebook$plots) {
+      needed <- cols_required_by(entry$params)
+      if (length(setdiff(needed, new_cols)) > 0L) {
+        removed <- c(removed, entry$id); next
+      }
+      new_res <- tryCatch(build_plot_from_params(df, entry$params),
+                          error = function(e) NULL)
+      if (is.null(new_res)) { removed <- c(removed, entry$id); next }
+      entry$result <- new_res
+      entry$is_gt  <- inherits(new_res, "gt_tbl")
+      kept <- c(kept, list(entry))
+    }
+    notebook$plots <- kept
+    if (length(removed) > 0L) {
+      if (!is.null(editing_id()) && editing_id() %in% removed) editing_id(NULL)
+      showNotification(
+        paste("Removed", length(removed),
+              "plot(s) referencing missing columns."),
+        type = "warning", duration = 8)
+    }
+  }
+
   # -- Update column selectors ------------------------------------------------
   observeEvent(loaded_data(), {
     df <- loaded_data(); req(df); cols <- names(df)
@@ -415,8 +537,19 @@ server <- function(input, output, session) {
     updateSelectInput(session, "country_col", choices = cols, selected = ctr_def)
     updateSelectInput(session, "year_col",    choices = cols, selected = yr_def)
     updateSelectInput(session, "color_by",    choices = c("(None)" = "", cols), selected = "")
+    updateSelectInput(session, "fill_by_hist", choices = c("(None)" = "", cols), selected = "")
+    pending_data_refresh(TRUE)
     if (!restoring()) nav_select("main_tabs", "Data Preview")
   })
+
+  # -- Refresh plots when the user actually opens the Notebook tab -------------
+  observeEvent(input$main_tabs, {
+    if (identical(input$main_tabs, "Notebook") && isTRUE(pending_data_refresh())) {
+      df <- loaded_data()
+      if (!is.null(df)) refresh_plots_for_new_data(df)
+      pending_data_refresh(FALSE)
+    }
+  }, ignoreInit = TRUE)
 
   # -- Data preview -----------------------------------------------------------
   output$data_summary <- renderPrint({
@@ -444,7 +577,9 @@ server <- function(input, output, session) {
       studlabs_overlap = input$studlabs_overlap, trend_labels = input$trend_labels,
       fill_map = input$fill_map, studlabs_treemap = input$studlabs_treemap,
       alluv_labels = input$alluv_labels, flow_labels = input$flow_labels,
-      flow_alpha = input$flow_alpha, stratum_width = input$stratum_width)
+      flow_alpha = input$flow_alpha, stratum_width = input$stratum_width,
+      fill_by_hist = input$fill_by_hist, fill_hist = input$fill_hist,
+      bins_hist = input$bins_hist, binwidth_hist = input$binwidth_hist)
   }
 
   restore_params <- function(p) {
@@ -481,6 +616,10 @@ server <- function(input, output, session) {
     updateCheckboxInput(session, "flow_labels", value = p$flow_labels %||% FALSE)
     updateSliderInput(session, "flow_alpha", value = p$flow_alpha %||% 0.25)
     updateSliderInput(session, "stratum_width", value = p$stratum_width %||% 0.5)
+    updateSelectInput(session, "fill_by_hist", selected = p$fill_by_hist %||% "")
+    updateSelectInput(session, "fill_hist", selected = p$fill_hist %||% "#7BB0D1")
+    updateNumericInput(session, "bins_hist", value = p$bins_hist %||% 30)
+    updateNumericInput(session, "binwidth_hist", value = p$binwidth_hist %||% NA)
   }
 
   # -- Build plot from current sidebar (reactive, tracks all inputs) -----------
@@ -506,6 +645,12 @@ server <- function(input, output, session) {
             label_space = input$label_space, base_size = bs, na.rm = na_rm,
             na_label = na_lab, na_in_percent = na_pct, na_last = na_lst))
         },
+        "Histogram" = { req(input$col)
+          fb <- if (nzchar(input$fill_by_hist %||% "")) rlang::sym(input$fill_by_hist) else NULL
+          bw <- if (isTRUE(is.finite(input$binwidth_hist)) && input$binwidth_hist > 0) input$binwidth_hist else NULL
+          rlang::inject(reviewHistogram(df, !!rlang::sym(input$col), fill_by = !!fb,
+            bins = input$bins_hist, binwidth = bw, fill = input$fill_hist,
+            sep = sep, base_size = bs, na.rm = na_rm, na_label = na_lab)) },
         "Waffle" = { req(input$col); rlang::inject(
           reviewWaffle(df, !!rlang::sym(input$col), sep = sep,
             ncol = input$ncol_waffle, study_id = !!sid, base_size = bs,
@@ -717,15 +862,14 @@ server <- function(input, output, session) {
     if (length(plots) == 0)
       return(tags$div(class = "text-center text-muted py-5",
         tags$p(icon("chart-bar", class = "fa-3x")),
-        tags$p("No plots yet. Configure a plot and click",
-               tags$strong("Add Plot"), "to get started.")))
+        tags$p("No plots yet. Configure options in the sidebar and click",
+               tags$strong("Add Plot"), "above. Click any plot to edit it.")))
 
     eid <- editing_id()
     card_list <- lapply(plots, function(entry) {
       pid    <- paste0("plot_", entry$id)
       gid    <- paste0("gt_", entry$id)
       del_id <- paste0("delete_", entry$id)
-      edt_id <- paste0("edit_", entry$id)
       dl_png <- paste0("dl_png_", entry$id)
       dl_pdf <- paste0("dl_pdf_", entry$id)
       w_id   <- paste0("w_", entry$id)
@@ -734,27 +878,26 @@ server <- function(input, output, session) {
 
       body <- if (entry$is_gt) gt::gt_output(gid) else plotOutput(pid, width = "100%")
 
+      h_val <- isolate(input[[h_id]] %||% 6)
+      w_val <- isolate(input[[w_id]] %||% 10)
       dim_row <- if (!entry$is_gt) tags$div(
         class = "d-flex gap-2 align-items-end flex-wrap",
         tags$div(style = "width:100px;",
-          numericInput(h_id, "Height (in)", value = 6, min = 2, max = 16, step = 1)),
+          numericInput(h_id, "Height (in)", value = h_val, min = 2, max = 16, step = 1)),
         tags$div(style = "width:120px;",
-          numericInput(w_id, "Export width (in)", value = 10, min = 3, max = 20, step = 1)))
+          numericInput(w_id, "Export width (in)", value = w_val, min = 3, max = 20, step = 1)))
 
       btns <- tags$div(class = "d-flex gap-2 mt-2",
         if (!entry$is_gt) downloadButton(dl_png, "PNG",
           class = "btn-outline-success btn-sm", icon = icon("image")),
         if (!entry$is_gt) downloadButton(dl_pdf, "PDF",
           class = "btn-outline-success btn-sm", icon = icon("file-pdf")),
-        actionButton(edt_id, NULL,
-          class = if (is_ed) "btn-warning btn-sm" else "btn-outline-primary btn-sm",
-          icon = icon("pen")),
         actionButton(del_id, NULL,
           class = "btn-outline-danger btn-sm", icon = icon("trash")))
 
       card(full_screen = TRUE,
         id = paste0("card_", entry$id),
-        class = if (is_ed) "border-warning border-2" else "",
+        class = if (is_ed) "border-warning border-2 litr-editing" else "",
         height = "auto",
         card_header(tags$strong(entry$title),
           if (is_ed) tags$span(class = "badge bg-warning ms-2", "editing")),
@@ -864,6 +1007,18 @@ server <- function(input, output, session) {
           sl_arg <- if (isTRUE(p$studlabs_bar)) ", studlabs = TRUE" else ""
           paste0("p", i, " <- reviewBar(data, ", col(p$col), fill_arg, w_arg, sl_arg, ls_arg,
                  sep_arg, sid_arg, bs_arg, na_args, ")")
+        },
+        "Histogram" = {
+          fb_arg <- if (!is.null(p$fill_by_hist) && nzchar(p$fill_by_hist)) paste0(", fill_by = ", col(p$fill_by_hist)) else ""
+          bins_arg <- if (identical(p$bins_hist, 30L) || identical(p$bins_hist, 30)) "" else paste0(", bins = ", p$bins_hist)
+          bw_arg <- if (!is.null(p$binwidth_hist) && isTRUE(is.finite(p$binwidth_hist)) && p$binwidth_hist > 0)
+                      paste0(", binwidth = ", p$binwidth_hist) else ""
+          fill_arg <- if (nzchar(fb_arg) || identical(p$fill_hist, "#7BB0D1") || is.null(p$fill_hist))
+                        "" else paste0(", fill = ", fmt(p$fill_hist))
+          paste0("p", i, " <- reviewHistogram(data, ", col(p$col), fb_arg, bins_arg, bw_arg, fill_arg,
+                 sep_arg, bs_arg,
+                 if (!isTRUE(p$na_rm)) paste0(", na.rm = FALSE, na_label = ", fmt(p$na_label %||% "Not reported")) else "",
+                 ")")
         },
         "Waffle" = {
           nc_arg <- if (identical(p$ncol_waffle, 5L) || identical(p$ncol_waffle, 5)) "" else paste0(", ncol = ", p$ncol_waffle)
