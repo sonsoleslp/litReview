@@ -697,9 +697,13 @@ server <- function(input, output, session) {
   current_plot_d <- current_plot |> debounce(400)
 
   # -- Live update: push changes to the active card + scroll to it -------------
+  # Depend only on the (debounced) plot, not on editing_id — otherwise clicking
+  # a card would fire this observer before restore_params had propagated to
+  # current_plot_d, writing the previously-edited plot into the newly clicked
+  # card for one debounce cycle (visible as a flicker).
   observe({
-    eid <- editing_id(); req(eid)
     result <- current_plot_d(); req(result)
+    eid <- isolate(editing_id()); req(eid)
     typ <- isolate(input$plot_type)
     col_label <- isolate(switch(typ,
       "Overlap"  = paste(input$col1, "vs", input$col2),
@@ -751,7 +755,8 @@ server <- function(input, output, session) {
     notebook$counter <- notebook$counter + 1L
     id <- notebook$counter
     entry <- list(id = id, type = typ, title = title, result = result,
-                  is_gt = inherits(result, "gt_tbl"), params = params)
+                  is_gt = inherits(result, "gt_tbl"), params = params,
+                  width = 10, height = 6)
     notebook$plots <- c(notebook$plots, list(entry))
     setup_card_observers(id)
 
@@ -779,7 +784,10 @@ server <- function(input, output, session) {
 
   # -- Save state to localStorage (debounced) ----------------------------------
   save_trigger <- reactive({
-    list(notebook$plots, loaded_data())
+    # Depend on each card's height/width inputs so a resize is persisted
+    dims <- lapply(notebook$plots, function(e)
+      c(input[[paste0("h_", e$id)]], input[[paste0("w_", e$id)]]))
+    list(notebook$plots, loaded_data(), dims)
   }) |> debounce(1000)
 
   observe({
@@ -792,7 +800,9 @@ server <- function(input, output, session) {
     # Only save params, not ggplot objects
     plot_meta <- lapply(plots, function(e) {
       list(id = e$id, type = e$type, title = e$title,
-           is_gt = e$is_gt, params = e$params)
+           is_gt = e$is_gt, params = e$params,
+           width  = isolate(input[[paste0("w_", e$id)]]) %||% e$width  %||% 10,
+           height = isolate(input[[paste0("h_", e$id)]]) %||% e$height %||% 6)
     })
 
     state <- list(
@@ -840,7 +850,8 @@ server <- function(input, output, session) {
           id <- pm$id
           entry <- list(id = id, type = pm$type, title = pm$title,
                         result = result, is_gt = inherits(result, "gt_tbl"),
-                        params = pm$params)
+                        params = pm$params,
+                        width = pm$width %||% 10, height = pm$height %||% 6)
           notebook$plots <- c(notebook$plots, list(entry))
           setup_card_observers(id)
           restored <- restored + 1L
@@ -878,8 +889,8 @@ server <- function(input, output, session) {
 
       body <- if (entry$is_gt) gt::gt_output(gid) else plotOutput(pid, width = "100%")
 
-      h_val <- isolate(input[[h_id]] %||% 6)
-      w_val <- isolate(input[[w_id]] %||% 10)
+      h_val <- isolate(input[[h_id]]) %||% entry$height %||% 6
+      w_val <- isolate(input[[w_id]]) %||% entry$width %||% 10
       dim_row <- if (!entry$is_gt) tags$div(
         class = "d-flex gap-2 align-items-end flex-wrap",
         tags$div(style = "width:100px;",
@@ -919,18 +930,20 @@ server <- function(input, output, session) {
           output[[gid]] <- gt::render_gt({ e$result })
         } else {
           output[[pid]] <- renderPlot({ print(e$result) },
-            res = 96, height = function() (input[[h_inp]] %||% 6) * 96)
+            res = 96, height = function() (input[[h_inp]] %||% e$height %||% 6) * 96)
           output[[dl_png]] <- downloadHandler(
             filename = function() paste0("litReview_",
               gsub("[^A-Za-z0-9]", "_", e$title), ".png"),
             content = function(file) ggplot2::ggsave(file, plot = e$result,
-              width = input[[w_inp]] %||% 10, height = input[[h_inp]] %||% 6,
+              width = input[[w_inp]] %||% e$width %||% 10,
+              height = input[[h_inp]] %||% e$height %||% 6,
               dpi = 300, bg = "white"))
           output[[dl_pdf]] <- downloadHandler(
             filename = function() paste0("litReview_",
               gsub("[^A-Za-z0-9]", "_", e$title), ".pdf"),
             content = function(file) ggplot2::ggsave(file, plot = e$result,
-              width = input[[w_inp]] %||% 10, height = input[[h_inp]] %||% 6,
+              width = input[[w_inp]] %||% e$width %||% 10,
+              height = input[[h_inp]] %||% e$height %||% 6,
               bg = "white"))
         }
       })
@@ -953,8 +966,8 @@ server <- function(input, output, session) {
         } else {
           f <- file.path(plot_dir, paste0(safe, ".png"))
           ggplot2::ggsave(f, plot = entry$result,
-            width = input[[paste0("w_", entry$id)]] %||% 10,
-            height = input[[paste0("h_", entry$id)]] %||% 6,
+            width = input[[paste0("w_", entry$id)]] %||% entry$width %||% 10,
+            height = input[[paste0("h_", entry$id)]] %||% entry$height %||% 6,
             dpi = 300, bg = "white")
         }
         files <- c(files, f)
