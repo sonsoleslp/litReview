@@ -579,7 +579,8 @@ test_that("reviewMap with unknown country (no match in map_data)", {
     Country = c("Atlantis", "Spain"),
     stringsAsFactors = FALSE
   )
-  p <- reviewMap(df)
+  # An unrecognised country warns (so it can be corrected) but still plots
+  expect_warning(p <- reviewMap(df), "not recognised")
   expect_s3_class(p, "ggplot")
 })
 

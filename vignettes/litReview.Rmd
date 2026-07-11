@@ -18,6 +18,7 @@ has_ggalluvial <- requireNamespace("ggalluvial", quietly = TRUE)
 has_treemapify <- requireNamespace("treemapify", quietly = TRUE)
 has_maps       <- requireNamespace("maps", quietly = TRUE)
 has_ggfittext  <- requireNamespace("ggfittext", quietly = TRUE)
+has_ggupset    <- requireNamespace("ggupset", quietly = TRUE)
 ```
 
 ## Overview
@@ -75,6 +76,26 @@ If labels are clipped, increase `label_space` (default 1.6):
 reviewBar(studies, Country, fill = PALETTE[6], label_space = 2)
 ```
 
+## Stacked / grouped bar chart
+
+`reviewStackedBar()` cross-tabulates a primary category against a second
+grouping variable, drawing one horizontal bar per category split by group. By
+default (`position = "fill"`) each bar is scaled to 100%, so you can compare
+composition across categories:
+
+```{r stacked-fill, fig.height = 5}
+reviewStackedBar(studies, Design, RiskOfBias)
+```
+
+Use `position = "stack"` to show raw counts instead:
+
+```{r stacked-count, fig.height = 5}
+reviewStackedBar(studies, Design, RiskOfBias, position = "stack")
+```
+
+Both `col` and `group` may contain multi-value cells, which are split before
+counting. Hide the in-segment labels with `labels = FALSE`.
+
 ## Waffle chart
 
 Each square represents one study occurrence:
@@ -101,6 +122,25 @@ reviewPie(studies, Design, donut = FALSE)
 
 ```{r overlap, fig.height = 4}
 reviewOverlap(studies, Design, Outcome, fill = PALETTE[3])
+```
+
+## UpSet plot
+
+`reviewUpset()` visualizes how the values of a multi-value column co-occur
+across studies. Each study contributes the set of distinct values it reports,
+and each bar counts the studies sharing that exact combination — a scalable
+alternative to the pairwise heatmap when three or more values can co-occur.
+Requires the `ggupset` package.
+
+```{r upset, fig.height = 5, eval = has_ggupset, warning = FALSE}
+reviewUpset(studies, Outcome)
+```
+
+Sort combinations by set size (`"degree"`) instead of frequency, and cap how
+many are shown with `n_intersections`:
+
+```{r upset-degree, fig.height = 5, eval = has_ggupset, warning = FALSE}
+reviewUpset(studies, Intervention, sort_by = "degree", n_intersections = 10)
 ```
 
 ## Alluvial plot

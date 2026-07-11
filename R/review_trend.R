@@ -14,6 +14,8 @@
 #' @param na.rm Logical. Drop missing values? Defaults to `TRUE`.
 #' @param na_label Character. Label for missing values when `na.rm = FALSE`.
 #'   Defaults to `"Not reported"`.
+#' @param na_last Logical. If `TRUE` (and `na.rm = FALSE`), place the missing
+#'   category last in the stack and legend. Defaults to `FALSE`.
 #' @param labels Character. What to display on each bar segment. One of
 #'   `"none"` (default), `"count"`, `"percent"` (within-year),
 #'   `"both"` (count and percent), or `"studies"` (comma-separated study IDs).
@@ -37,7 +39,7 @@
 #' @export
 reviewTrend <- function(data, col, year_col = Year, sep = "\r\n",
                         colors = PALETTE, base_size = 12, na.rm = TRUE,
-                        na_label = "Not reported",
+                        na_label = "Not reported", na_last = FALSE,
                         labels = c("none", "count", "percent", "both", "studies"),
                         study_id = StudyID) {
   col_sym <- rlang::ensym(col)
@@ -89,6 +91,13 @@ reviewTrend <- function(data, col, year_col = Year, sep = "\r\n",
     both    = paste0(counts$n, " (", counts$pct, "%)"),
     studies = gsub(", ", "\n", counts$study_label)
   )
+
+  # Place the missing category last in the stack and legend when asked
+  if (!na.rm && isTRUE(na_last)) {
+    lv <- levels_na_last(sort(unique(as.character(counts[[col_name]]))),
+                         na_label, TRUE)
+    counts[[col_name]] <- factor(counts[[col_name]], levels = lv)
+  }
 
   n_cats <- length(unique(counts[[col_name]]))
   colors <- recycle_colors(colors, n_cats)

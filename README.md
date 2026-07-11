@@ -13,7 +13,16 @@ objects you can customize with `+`.
 
 ## Installation
 
+Install the released version from CRAN:
+
 ``` r
+install.packages("litReview")
+```
+
+Or the development version from GitHub:
+
+``` r
+# install.packages("remotes")
 remotes::install_github("sonsoleslp/litReview")
 ```
 
@@ -47,6 +56,36 @@ reviewBar(studies, Design, fill = PALETTE[2], studlabs = TRUE)
 
 <img src="man/figures/README-studlabs-1.png" alt="" width="100%" />
 
+### Stacked bar chart
+
+`reviewStackedBar()` compares the composition of one category across
+another. By default each bar is scaled to 100% to compare proportions:
+
+``` r
+reviewStackedBar(studies, Design, RiskOfBias)
+```
+
+<img src="man/figures/README-stacked-1.png" alt="" width="100%" />
+
+Use `position = "stack"` for raw counts:
+
+``` r
+reviewStackedBar(studies, Design, RiskOfBias, position = "stack")
+```
+
+<img src="man/figures/README-stacked-count-1.png" alt="" width="100%" />
+
+### Histogram
+
+`reviewHistogram()` bins a numeric column; add `fill_by` to stack by a
+group.
+
+``` r
+reviewHistogram(studies, SampleSize, bins = 15)
+```
+
+<img src="man/figures/README-histogram-1.png" alt="" width="100%" />
+
 ### Waffle chart
 
 ``` r
@@ -66,10 +105,22 @@ reviewPie(studies, Design)
 ### Co-occurrence heatmap
 
 ``` r
-reviewOverlap(studies, Design, Outcome)
+reviewOverlap(studies, Design, Outcome, fill = "#b07aa1")
 ```
 
 <img src="man/figures/README-overlap-1.png" alt="" width="100%" />
+
+### UpSet plot
+
+`reviewUpset()` shows how the values of a multi-value column co-occur
+across studies — a scalable alternative to the pairwise heatmap.
+Requires the `ggupset` package.
+
+``` r
+reviewUpset(studies, Outcome,  fill = "#f16769")
+```
+
+<img src="man/figures/README-upset-1.png" alt="" width="100%" />
 
 ### Alluvial plot
 
@@ -108,6 +159,32 @@ reviewTreemap(studies, Intervention, color_by = InterventionType)
 ```
 
 <img src="man/figures/README-treemap-color-1.png" alt="" width="100%" />
+
+### Coding matrix
+
+`reviewMatrix()` shows a study-by-criteria evidence matrix: a tile
+wherever a study addresses a criterion, coloured by a study attribute
+with the coding level inside.
+
+``` r
+criteria <- c("Randomization", "Blinding", "SampleJustification",
+              "AttritionReported", "EthicsApproval", "EffectSize")
+reviewMatrix(studies[1:20, ], criteria, color_by = "PubType",
+             levels = c(F = "Full", P = "Partial", M = "Mention"))
+```
+
+<img src="man/figures/README-matrix-1.png" alt="" width="100%" />
+
+### Tree diagram
+
+`reviewTree()` draws a left-to-right hierarchy from columns given in
+order, listing the studies at each leaf.
+
+``` r
+reviewTree(studies, c("InterventionType", "Intervention"), study_id = Author)
+```
+
+<img src="man/figures/README-tree-1.png" alt="" width="100%" />
 
 ### Summary table
 

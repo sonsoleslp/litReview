@@ -1,0 +1,194 @@
+---
+title: "Summary tables"
+description: >
+  Every configuration option of reviewTable(), demonstrated on the example
+  dataset.
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>",
+  message = FALSE, warning = FALSE
+)
+```
+
+```{r setup}
+library(litReview)
+data(studies)
+```
+
+`reviewTable()` summarizes a single column as a formatted table listing each
+category, its contributing studies, frequency, and percentage. It returns a
+[`gt`](https://gt.rstudio.com) object that renders inline in HTML and can be
+exported to LaTeX. This article walks through **every argument** of
+
+```r
+reviewTable(data, col, sep = "\r\n", study_id = StudyID, latex = FALSE,
+            cite = FALSE, na.rm = TRUE, na_label = "Not reported",
+            na_in_percent = TRUE, na_last = FALSE)
+```
+
+## Default
+
+Pass the data frame and a column. Column names may be bare or quoted. Each row
+is a distinct category, with its contributing study IDs, count, and percentage.
+
+```{r default}
+reviewTable(studies, Design)
+```
+
+## `col`: the column to summarize
+
+Any categorical column works. Multi-value columns (cells holding several
+values) are split first — see [`sep`](#sep-multi-value-separator) below.
+`Outcome` stores several outcomes per study, so each value is counted
+independently and its study list is the union of studies reporting it:
+
+```{r col-outcome}
+reviewTable(studies, Outcome)
+```
+
+## `sep`: multi-value separator
+
+Multi-value cells are split on `sep` before counting. In `studies`, `Outcome`
+uses newline separators (`"\r\n"`, the default). If your data uses a different
+delimiter, set `sep`. Here we rebuild a semicolon-separated column to
+demonstrate:
+
+```{r sep-custom}
+studies_semi <- studies
+studies_semi$Outcome <- gsub("\r\n", "; ", studies_semi$Outcome)
+reviewTable(studies_semi, Outcome, sep = "; ")
+```
+
+## `study_id`: which column lists the contributing studies
+
+By default the studies column is filled from `StudyID`. Point `study_id` at any
+other identifier column to list studies differently — here, by author:
+
+```{r study-id-author}
+reviewTable(studies, Design, study_id = Author)
+```
+
+## `latex`: emit LaTeX instead of a gt table
+
+With `latex = TRUE`, `reviewTable()` returns a LaTeX representation of the table
+(via [`gt::as_latex()`](https://gt.rstudio.com/reference/as_latex.html)) rather
+than an HTML `gt` object. The result is a character string of class
+`litreview_latex`; in a knitted document it is emitted verbatim. Below we show
+the generated LaTeX source as text so it is visible in this HTML article:
+
+```{r latex, results = "asis"}
+tex <- reviewTable(studies, Design, latex = TRUE)
+cat("```latex", tex, "```", sep = "\n")
+```
+
+Drop that block into a `.tex` document (it requires the `booktabs` package) to
+typeset the table.
+
+## `cite`: render studies as `\cite{}` keys
+
+`cite = TRUE` treats the `study_id` values as BibTeX citation keys and wraps
+each row's study list in a single `\cite{...}` command — ideal for a
+manuscript. It is most useful with `study_id = bibKey` (the dataset's BibTeX
+keys) and `latex = TRUE`:
+
+```{r cite, results = "asis"}
+tex <- reviewTable(studies, Design, study_id = bibKey,
+                   latex = TRUE, cite = TRUE)
+cat("```latex", tex, "```", sep = "\n")
+```
+
+Each `Studies` cell now holds `\cite{author6_2021,author17_2019,...}`, which
+resolves against your `.bib` file at compile time.
+
+## Embedding in a LaTeX or R Markdown document
+
+When your document compiles to PDF — an `.Rnw` (Sweave) file, or an R Markdown
+document with a LaTeX/PDF output format — call `reviewTable(..., latex = TRUE)`
+in a chunk and the table typesets in place. The returned object carries a
+`knit_print` method that emits the LaTeX verbatim, so no extra chunk options are
+needed; in Sweave, the chunk option `results = "asis"` achieves the same.
+
+```{r embed, eval = FALSE}
+reviewTable(studies, Design, study_id = bibKey, latex = TRUE, cite = TRUE)
+```
+
+That call expands to a complete `table` environment (`\begin{table}` …
+`\end{table}`) — the same source shown under [`latex`](#latex-emit-latex-instead-of-a-gt-table)
+and [`cite`](#cite-render-studies-as-cite-keys) above. Two preamble
+requirements:
+
+- The rules use **booktabs** (`\toprule`, `\midrule`, `\bottomrule`), so load
+  `\usepackage{booktabs}`.
+- With `cite = TRUE`, load a citation package (`\usepackage{natbib}` or
+  `\usepackage{biblatex}`) and make sure the keys in your `study_id` column
+  exist in the bibliography, so each `\cite{...}` resolves at compile time.
+
+If your citation keys live in a column other than `StudyID`, point `study_id`
+at it — for example `study_id = bibKey` above, or any custom key column:
+
+```{r embed-custom, results = "asis"}
+refs <- data.frame(
+  RefKey = c("smith2020", "doe2019", "lee2021", "smith2020"),
+  Design = c("RCT", "Cohort", "RCT", "Case-control"),
+  stringsAsFactors = FALSE
+)
+tex <- reviewTable(refs, Design, study_id = RefKey, latex = TRUE, cite = TRUE)
+cat("```latex", tex, "```", sep = "\n")
+```
+
+## Missing data: `na.rm`, `na_label`, `na_in_percent`, `na_last`
+
+These four arguments control how `NA` (and empty) cells are treated. We use a
+column that actually has missing values — `FundingSource`.
+
+### `na.rm`
+
+By default `na.rm = TRUE` drops missing rows, but the percentage denominator is
+still the full sample, so the shown percentages need not sum to 100%:
+
+```{r na-rm-default}
+reviewTable(studies, FundingSource)
+```
+
+Set `na.rm = FALSE` to keep the missing rows as their own category:
+
+```{r na-rm-keep}
+reviewTable(studies, FundingSource, na.rm = FALSE)
+```
+
+### `na_label`
+
+When missing rows are kept, `na_label` names that category (default
+`"Not reported"`):
+
+```{r na-label}
+reviewTable(studies, FundingSource, na.rm = FALSE, na_label = "Unspecified")
+```
+
+### `na_in_percent`
+
+With `na_in_percent = FALSE` the denominator excludes missing rows, so the
+reported categories sum to 100%:
+
+```{r na-in-percent}
+reviewTable(studies, FundingSource, na.rm = FALSE, na_in_percent = FALSE)
+```
+
+### `na_last`
+
+`na_last = TRUE` forces the missing-value row to the end of the table
+regardless of its frequency:
+
+```{r na-last}
+reviewTable(studies, FundingSource, na.rm = FALSE, na_last = TRUE)
+```
+
+## Notes
+
+`reviewTable()` returns a [`gt`](https://gt.rstudio.com) object (or, with
+`latex = TRUE`, a LaTeX character string). Because the default result is a plain
+`gt` table, you can pipe it into any `gt` styling verb — `gt::tab_header()`,
+`gt::cols_label()`, `gt::opt_stylize()`, and so on — before printing, or export
+it with `gt::gtsave()` and `gt::as_latex()`.

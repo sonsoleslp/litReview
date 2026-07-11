@@ -13,4 +13,24 @@ PALETTE
 \description{
 A character vector of 8 hex colors for use in literature review plots.
 }
+\details{
+Anywhere a \code{colors} (or palette-style \code{fill}) argument accepts this
+vector, you may instead pass the \strong{name of an RColorBrewer palette}
+(e.g. \code{"Set2"}, \code{"Dark2"}, \code{"Blues"}); it is expanded to the number of
+categories needed. For the heatmap and map fills, a sequential/diverging
+ColorBrewer name (e.g. \code{"Blues"}, \code{"RdYlBu"}) switches to
+\code{\link[ggplot2:scale_brewer]{ggplot2::scale_fill_distiller()}}. Using a ColorBrewer name requires the
+\pkg{RColorBrewer} package.
+}
+\examples{
+PALETTE
+# A ColorBrewer palette name works wherever `colors` is accepted:
+if (requireNamespace("RColorBrewer", quietly = TRUE)) {
+  reviewWaffle(studies, Design, colors = "Set2")
+}
+
+}
+\seealso{
+\code{\link[RColorBrewer:ColorBrewer]{RColorBrewer::brewer.pal()}}
+}
 \keyword{datasets}

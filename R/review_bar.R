@@ -67,6 +67,8 @@ reviewBar <- function(data, col, fill = "#7BB0D1", width = 0.6,
 
   # Proportional sizes derived from base_size and number of categories
   n_cats <- nrow(summary_data)
+  # A single ColorBrewer palette name expands to one colour per bar
+  fill <- resolve_palette(fill, n_cats)
   label_size <- base_size / ggplot2::.pt
   circle_size <- base_size * 0.6 * min(1, 8 / n_cats)
   margin_r <- base_size * 1.5

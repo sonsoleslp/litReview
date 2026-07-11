@@ -1,10 +1,11 @@
 #' Example Literature Review Dataset
 #'
 #' A synthetic dataset of 50 fictional studies for demonstrating the
-#' plotting functions in \pkg{litReview}. Contains 18 columns covering
-#' common fields extracted during a literature review.
+#' plotting functions in \pkg{litReview}. Contains 27 columns covering
+#' common fields extracted during a literature review, including a block of
+#' methodological reporting criteria suitable for [reviewMatrix()].
 #'
-#' @format A data frame with 50 rows and 18 variables:
+#' @format A data frame with 50 rows and 27 variables:
 #' \describe{
 #'   \item{StudyID}{Unique study identifier (S01--S50).}
 #'   \item{bibKey}{BibTeX citation key.}
@@ -28,9 +29,36 @@
 #'   \item{OpenAccess}{Whether the study is open access (Yes, No, or \code{NA}).}
 #'   \item{InterventionType}{Higher-order grouping of \code{Intervention}
 #'     (Behavioral, Educational, Physical, Medical, Multimodal).}
+#'   \item{PubType}{Publication type (Journal, Conference, Preprint, Report).}
+#'   \item{Randomization}{Reporting of randomization. Coded \code{"F"} (full),
+#'     \code{"P"} (partial), \code{"M"} (mentioned), or \code{NA} (not
+#'     addressed). Trial-only item: \code{NA} for non-RCT designs.}
+#'   \item{Blinding}{Reporting of blinding, coded as \code{Randomization}.
+#'     Trial-only item: \code{NA} for non-RCT designs.}
+#'   \item{SampleJustification}{Reporting of sample-size justification, coded
+#'     \code{"F"}/\code{"P"}/\code{"M"}/\code{NA}.}
+#'   \item{AttritionReported}{Reporting of attrition/dropout, coded as above.}
+#'   \item{EthicsApproval}{Reporting of ethics approval, coded as above.}
+#'   \item{Preregistration}{Reporting of preregistration, coded as above.}
+#'   \item{EffectSize}{Reporting of effect sizes, coded as above.}
+#'   \item{LimitationsDiscussed}{Reporting of study limitations, coded as
+#'     above.}
 #' }
+#'
+#' @details The reporting-criteria columns (\code{Randomization} through
+#'   \code{LimitationsDiscussed}) are coded for how fully each study reports the
+#'   item — \code{"F"} full, \code{"P"} partial, \code{"M"} only mentioned, or
+#'   \code{NA} not addressed — and are designed for the study-by-criteria
+#'   [reviewMatrix()] plot.
 #'
 #' @examples
 #' data(studies)
 #' reviewBar(studies, Design)
+#'
+#' # Reporting-criteria matrix
+#' criteria <- c("Randomization", "Blinding", "SampleJustification",
+#'               "AttritionReported", "EthicsApproval", "Preregistration",
+#'               "EffectSize", "LimitationsDiscussed")
+#' reviewMatrix(studies, criteria, color_by = "PubType",
+#'              levels = c(F = "Full", P = "Partial", M = "Mention"))
 "studies"

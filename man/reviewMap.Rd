@@ -33,9 +33,17 @@ A \link[ggplot2:ggplot]{ggplot2::ggplot} object.
 }
 \description{
 Counts the number of studies per country and shades a world map accordingly.
-Common country name aliases (e.g. \code{"United States"} -> \code{"USA"},
-\code{"United Kingdom"} -> \code{"UK"}) are resolved automatically.
+Country values may be English names, common aliases (e.g. \code{"United States"},
+\code{"United Kingdom"}), or ISO 2- or 3-letter codes (e.g. \code{"US"}/\code{"USA"},
+\code{"GB"}/\code{"GBR"}), all resolved automatically. Any value that cannot be matched
+to a map region triggers a warning listing it, so it is easy to correct.
 Returns a \link[ggplot2:ggplot]{ggplot2::ggplot} object.
+}
+\details{
+Unlike the categorical plots, \code{reviewMap()} takes only \code{na.rm}: a
+choropleth has no missing-value category to label (\code{na_label}) and shows a
+colour scale rather than a percentage (\code{na_in_percent}), so those arguments
+do not apply. Countries with no data are shaded with a neutral \code{na.value}.
 }
 \examples{
 df <- data.frame(

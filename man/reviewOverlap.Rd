@@ -14,7 +14,8 @@ reviewOverlap(
   na.rm = TRUE,
   na_label = "Not reported",
   studlabs = FALSE,
-  study_id = StudyID
+  study_id = StudyID,
+  label_wrap = 15
 )
 }
 \arguments{
@@ -42,6 +43,10 @@ each tile instead of (or below) the count. Defaults to \code{FALSE}.}
 
 \item{study_id}{Column containing study identifiers (quoted or unquoted).
 Used when \code{studlabs = TRUE}. Defaults to \code{StudyID}.}
+
+\item{label_wrap}{Integer. Wrap axis tick labels longer than this many
+characters onto multiple lines. Set to \code{NULL} or \code{Inf} to disable.
+Defaults to \code{15}.}
 }
 \value{
 A \link[ggplot2:ggplot]{ggplot2::ggplot} object.

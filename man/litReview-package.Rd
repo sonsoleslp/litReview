@@ -8,19 +8,19 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Provides functions to summarize and visualize categorical data from literature reviews. Generates bar charts, waffle charts, donut plots, co-occurrence heatmaps, trend charts, and world maps for reporting study characteristics across multiple publications.
+Summarizes and visualizes categorical data extracted during literature reviews and evidence syntheses, starting from a data frame with one row per study. Generates publication-ready bar, stacked bar, histogram, waffle, donut, treemap, alluvial, trend, co-occurrence, 'UpSet', tree, and study-by-criteria matrix figures, together with world maps and formatted summary tables. Plot functions return standard 'ggplot2' objects that can be further customized, and an interactive 'Shiny' application is included for building figures without writing code. Aims to help researchers report study characteristics consistently across many publications.
 }
 \seealso{
 Useful links:
 \itemize{
   \item \url{https://github.com/sonsoleslp/litReview}
-  \item \url{http://sonsoles.me/litReview/}
+  \item \url{https://sonsoles.me/litReview/}
   \item Report bugs at \url{https://github.com/sonsoleslp/litReview/issues}
 }
 
 }
 \author{
-\strong{Maintainer}: Sonsoles López-Pernas \email{sonsoles.lopez@uef.fi}
+\strong{Maintainer}: Sonsoles López-Pernas \email{sonsoles.lopez@uef.fi} [copyright holder]
 
 Authors:
 \itemize{

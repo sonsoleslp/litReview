@@ -71,6 +71,21 @@ test_that("reviewOverlap studlabs with custom study_id", {
   expect_s3_class(p, "ggplot")
 })
 
+test_that("reviewOverlap accepts label_wrap (wrap and disable)", {
+  expect_s3_class(reviewOverlap(df, Design, Country, label_wrap = 8), "ggplot")
+  expect_s3_class(reviewOverlap(df, Design, Country, label_wrap = NULL), "ggplot")
+})
+
+test_that("wrap_labels wraps long strings and passes short ones through", {
+  w <- litReview:::wrap_labels(10)
+  expect_equal(w("short"), "short")
+  expect_match(w("a very long label indeed"), "\n")
+  # non-positive / non-finite / NULL widths disable wrapping
+  expect_identical(litReview:::wrap_labels(NULL), identity)
+  expect_identical(litReview:::wrap_labels(Inf), identity)
+  expect_identical(litReview:::wrap_labels(0), identity)
+})
+
 # -- reviewTrend --------------------------------------------------------------
 
 test_that("reviewTrend returns a ggplot", {
@@ -138,6 +153,32 @@ test_that("reviewMap resolves country aliases", {
   )
   p <- reviewMap(df2)
   expect_s3_class(p, "ggplot")
+})
+
+test_that("reviewMap resolves ISO 2- and 3-letter codes without warning", {
+  df2 <- data.frame(
+    StudyID = paste0("S", 1:4),
+    Country = c("USA", "GBR", "DE", "ES"),
+    stringsAsFactors = FALSE
+  )
+  expect_no_warning(p <- reviewMap(df2))
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("reviewMap warns about unrecognised countries", {
+  df2 <- data.frame(
+    StudyID = c("S1", "S2"),
+    Country = c("Spain", "Freedonia"),
+    stringsAsFactors = FALSE
+  )
+  expect_warning(reviewMap(df2), "not recognised")
+})
+
+test_that("normalise_countries resolves ISO codes against world regions", {
+  wr <- unique(ggplot2::map_data("world")$region)
+  expect_equal(
+    litReview:::normalise_countries(c("US", "GBR", "DEU", "USA"), wr),
+    c("USA", "UK", "Germany", "USA"))
 })
 
 # -- composability ------------------------------------------------------------

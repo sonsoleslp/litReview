@@ -19,6 +19,9 @@
 #'   each tile instead of (or below) the count. Defaults to `FALSE`.
 #' @param study_id Column containing study identifiers (quoted or unquoted).
 #'   Used when `studlabs = TRUE`. Defaults to `StudyID`.
+#' @param label_wrap Integer. Wrap axis tick labels longer than this many
+#'   characters onto multiple lines. Set to `NULL` or `Inf` to disable.
+#'   Defaults to `15`.
 #'
 #' @return A [ggplot2::ggplot] object.
 #'
@@ -36,7 +39,8 @@
 reviewOverlap <- function(data, col1, col2, sep = "\r\n", fill = "#7BB0D1",
                           base_size = 12, na.rm = TRUE,
                           na_label = "Not reported",
-                          studlabs = FALSE, study_id = StudyID) {
+                          studlabs = FALSE, study_id = StudyID,
+                          label_wrap = 15) {
   col1_sym <- rlang::ensym(col1)
   col2_sym <- rlang::ensym(col2)
   col1_name <- rlang::as_name(col1_sym)
@@ -77,12 +81,17 @@ reviewOverlap <- function(data, col1, col2, sep = "\r\n", fill = "#7BB0D1",
   text_size <- base_size / ggplot2::.pt
   stud_size <- base_size * 0.55 / ggplot2::.pt
 
+  # Wrap long tick labels onto multiple lines so they don't run off the axes.
+  wrapper <- wrap_labels(label_wrap)
+
   p <- ggplot2::ggplot(
     counts,
     ggplot2::aes(!!col1_sym, !!col2_sym, fill = .data$n)
   ) +
     ggplot2::geom_tile(color = "white", linewidth = tile_lw) +
-    ggplot2::scale_fill_gradient(low = "#f0f0f0", high = fill) +
+    fill_gradient_scale(fill) +
+    ggplot2::scale_x_discrete(labels = wrapper) +
+    ggplot2::scale_y_discrete(labels = wrapper) +
     theme_litreview(base_size = base_size) +
     ggplot2::theme(
       axis.text.x     = ggplot2::element_text(angle = 45, hjust = 1),

@@ -25,7 +25,16 @@ knitr::opts_chunk$set(
 
 ## Installation
 
+Install the released version from CRAN:
+
 ```{r eval = FALSE}
+install.packages("litReview")
+```
+
+Or the development version from GitHub:
+
+```{r eval = FALSE}
+# install.packages("remotes")
 remotes::install_github("sonsoleslp/litReview")
 ```
 
@@ -53,6 +62,28 @@ reviewBar(studies, Design, fill = "#59a14f") +
 reviewBar(studies, Design, fill = PALETTE[2], studlabs = TRUE)
 ```
 
+### Stacked bar chart
+
+`reviewStackedBar()` compares the composition of one category across another. By default each bar is scaled to 100% to compare proportions:
+
+```{r stacked, fig.height = 4}
+reviewStackedBar(studies, Design, RiskOfBias)
+```
+
+Use `position = "stack"` for raw counts:
+
+```{r stacked-count, fig.height = 4}
+reviewStackedBar(studies, Design, RiskOfBias, position = "stack")
+```
+
+### Histogram
+
+`reviewHistogram()` bins a numeric column; add `fill_by` to stack by a group.
+
+```{r histogram, fig.height = 3.5}
+reviewHistogram(studies, SampleSize, bins = 15)
+```
+
 ### Waffle chart
 
 ```{r waffle}
@@ -68,7 +99,15 @@ reviewPie(studies, Design)
 ### Co-occurrence heatmap
 
 ```{r overlap, fig.height = 4}
-reviewOverlap(studies, Design, Outcome)
+reviewOverlap(studies, Design, Outcome, fill = "#b07aa1")
+```
+
+### UpSet plot
+
+`reviewUpset()` shows how the values of a multi-value column co-occur across studies — a scalable alternative to the pairwise heatmap. Requires the `ggupset` package.
+
+```{r upset, fig.height = 5, warning = FALSE}
+reviewUpset(studies, Outcome,  fill = "#f16769")
 ```
 
 ### Alluvial plot
@@ -97,6 +136,25 @@ reviewTreemap(studies, Design)
 
 ```{r treemap-color, fig.height = 5}
 reviewTreemap(studies, Intervention, color_by = InterventionType)
+```
+
+### Coding matrix
+
+`reviewMatrix()` shows a study-by-criteria evidence matrix: a tile wherever a study addresses a criterion, coloured by a study attribute with the coding level inside.
+
+```{r matrix, fig.height = 5.5}
+criteria <- c("Randomization", "Blinding", "SampleJustification",
+              "AttritionReported", "EthicsApproval", "EffectSize")
+reviewMatrix(studies[1:20, ], criteria, color_by = "PubType",
+             levels = c(F = "Full", P = "Partial", M = "Mention"))
+```
+
+### Tree diagram
+
+`reviewTree()` draws a left-to-right hierarchy from columns given in order, listing the studies at each leaf.
+
+```{r tree, fig.width = 10, fig.height = 6}
+reviewTree(studies, c("InterventionType", "Intervention"), study_id = Author)
 ```
 
 ### Summary table

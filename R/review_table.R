@@ -78,7 +78,7 @@ print.litreview_latex <- function(x, ...) {
   invisible(x)
 }
 
-#' @export
+#' @exportS3Method knitr::knit_print
 knit_print.litreview_latex <- function(x, ...) {
   knitr::asis_output(x)
 }

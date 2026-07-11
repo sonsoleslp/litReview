@@ -13,6 +13,7 @@ reviewTrend(
   base_size = 12,
   na.rm = TRUE,
   na_label = "Not reported",
+  na_last = FALSE,
   labels = c("none", "count", "percent", "both", "studies"),
   study_id = StudyID
 )
@@ -36,6 +37,9 @@ Defaults to \link{PALETTE}.}
 
 \item{na_label}{Character. Label for missing values when \code{na.rm = FALSE}.
 Defaults to \code{"Not reported"}.}
+
+\item{na_last}{Logical. If \code{TRUE} (and \code{na.rm = FALSE}), place the missing
+category last in the stack and legend. Defaults to \code{FALSE}.}
 
 \item{labels}{Character. What to display on each bar segment. One of
 \code{"none"} (default), \code{"count"}, \code{"percent"} (within-year),
