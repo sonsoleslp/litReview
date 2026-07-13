@@ -18,7 +18,8 @@ reviewOverlap(
   na.rm = TRUE,
   na_label = "Not reported",
   studlabs = FALSE,
-  study_id = StudyID
+  study_id = StudyID,
+  label_wrap = 15
 )
 ```
 
@@ -66,6 +67,11 @@ reviewOverlap(
 
   Column containing study identifiers (quoted or unquoted). Used when
   `studlabs = TRUE`. Defaults to `StudyID`.
+
+- label_wrap:
+
+  Integer. Wrap axis tick labels longer than this many characters onto
+  multiple lines. Set to `NULL` or `Inf` to disable. Defaults to `15`.
 
 ## Value
 

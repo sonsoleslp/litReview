@@ -1,10 +1,23 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
-  latex: latex.html
+  articles/alluvial: alluvial.html
+  articles/bar: bar.html
+  articles/histogram: histogram.html
   litReview: litReview.html
-last_built: 2026-07-07T18:18Z
+  articles/map: map.html
+  articles/matrix: matrix.html
+  articles/overlap: overlap.html
+  articles/pie: pie.html
+  articles/stacked-bar: stacked-bar.html
+  articles/table: table.html
+  articles/tree: tree.html
+  articles/treemap: treemap.html
+  articles/trend: trend.html
+  articles/upset: upset.html
+  articles/waffle: waffle.html
+last_built: 2026-07-13T13:03Z
 urls:
   reference: https://sonsoles.me/litReview/reference
   article: https://sonsoles.me/litReview/articles

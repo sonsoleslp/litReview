@@ -47,13 +47,27 @@ head(studies)
 #> 4 Pain\nFunction\nQuality of life Narrative synthesis        Low    Foundation
 #> 5                            Pain               ANOVA       High          None
 #> 6       Function\nQuality of life       Mixed methods        Low      Industry
-#>   OpenAccess InterventionType
-#> 1         No       Behavioral
-#> 2        Yes      Educational
-#> 3         No       Multimodal
-#> 4         No       Multimodal
-#> 5         No         Physical
-#> 6         No       Behavioral
+#>   OpenAccess InterventionType    PubType Randomization Blinding
+#> 1         No       Behavioral Conference          <NA>     <NA>
+#> 2        Yes      Educational    Journal          <NA>     <NA>
+#> 3         No       Multimodal Conference          <NA>     <NA>
+#> 4         No       Multimodal Conference          <NA>     <NA>
+#> 5         No         Physical    Journal          <NA>     <NA>
+#> 6         No       Behavioral Conference             P        F
+#>   SampleJustification AttritionReported EthicsApproval Preregistration
+#> 1                   F                 F              P            <NA>
+#> 2                <NA>              <NA>              F            <NA>
+#> 3                   P                 F              F            <NA>
+#> 4                   P              <NA>           <NA>               P
+#> 5                   M                 P           <NA>            <NA>
+#> 6                   F                 M              F               P
+#>   EffectSize LimitationsDiscussed
+#> 1       <NA>                    P
+#> 2          M                    P
+#> 3          M                    F
+#> 4          F                    P
+#> 5          F                    P
+#> 6          F                    P
 ```
 
 ## Bar chart
@@ -113,6 +127,33 @@ reviewBar(studies, Country, fill = PALETTE[6], label_space = 2)
 
 ![](litReview_files/figure-html/bar-labelspace-1.png)
 
+## Stacked / grouped bar chart
+
+[`reviewStackedBar()`](https://sonsoles.me/litReview/reference/reviewStackedBar.md)
+cross-tabulates a primary category against a second grouping variable,
+drawing one horizontal bar per category split by group. By default
+(`position = "fill"`) each bar is scaled to 100%, so you can compare
+composition across categories:
+
+``` r
+
+reviewStackedBar(studies, Design, RiskOfBias)
+```
+
+![](litReview_files/figure-html/stacked-fill-1.png)
+
+Use `position = "stack"` to show raw counts instead:
+
+``` r
+
+reviewStackedBar(studies, Design, RiskOfBias, position = "stack")
+```
+
+![](litReview_files/figure-html/stacked-count-1.png)
+
+Both `col` and `group` may contain multi-value cells, which are split
+before counting. Hide the in-segment labels with `labels = FALSE`.
+
 ## Waffle chart
 
 Each square represents one study occurrence:
@@ -153,6 +194,32 @@ reviewOverlap(studies, Design, Outcome, fill = PALETTE[3])
 ```
 
 ![](litReview_files/figure-html/overlap-1.png)
+
+## UpSet plot
+
+[`reviewUpset()`](https://sonsoles.me/litReview/reference/reviewUpset.md)
+visualizes how the values of a multi-value column co-occur across
+studies. Each study contributes the set of distinct values it reports,
+and each bar counts the studies sharing that exact combination — a
+scalable alternative to the pairwise heatmap when three or more values
+can co-occur. Requires the `ggupset` package.
+
+``` r
+
+reviewUpset(studies, Outcome)
+```
+
+![](litReview_files/figure-html/upset-1.png)
+
+Sort combinations by set size (`"degree"`) instead of frequency, and cap
+how many are shown with `n_intersections`:
+
+``` r
+
+reviewUpset(studies, Intervention, sort_by = "degree", n_intersections = 10)
+```
+
+![](litReview_files/figure-html/upset-degree-1.png)
 
 ## Alluvial plot
 

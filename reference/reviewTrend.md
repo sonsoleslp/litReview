@@ -17,6 +17,7 @@ reviewTrend(
   base_size = 12,
   na.rm = TRUE,
   na_label = "Not reported",
+  na_last = FALSE,
   labels = c("none", "count", "percent", "both", "studies"),
   study_id = StudyID
 )
@@ -58,6 +59,11 @@ reviewTrend(
 
   Character. Label for missing values when `na.rm = FALSE`. Defaults to
   `"Not reported"`.
+
+- na_last:
+
+  Logical. If `TRUE` (and `na.rm = FALSE`), place the missing category
+  last in the stack and legend. Defaults to `FALSE`.
 
 - labels:
 

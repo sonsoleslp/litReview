@@ -11,3 +11,30 @@ PALETTE
 ## Format
 
 An object of class `character` of length 8.
+
+## Details
+
+Anywhere a `colors` (or palette-style `fill`) argument accepts this
+vector, you may instead pass the **name of an RColorBrewer palette**
+(e.g. `"Set2"`, `"Dark2"`, `"Blues"`); it is expanded to the number of
+categories needed. For the heatmap and map fills, a sequential/diverging
+ColorBrewer name (e.g. `"Blues"`, `"RdYlBu"`) switches to
+[`ggplot2::scale_fill_distiller()`](https://ggplot2.tidyverse.org/reference/scale_brewer.html).
+Using a ColorBrewer name requires the RColorBrewer package.
+
+## See also
+
+[`RColorBrewer::brewer.pal()`](https://rdrr.io/pkg/RColorBrewer/man/ColorBrewer.html)
+
+## Examples
+
+``` r
+PALETTE
+#> [1] "#ff9da7" "#76b7b2" "#f16769" "#b07aa1" "#edc948" "#59a14f" "#7ea9c7"
+#> [8] "#F28E2B"
+# A ColorBrewer palette name works wherever `colors` is accepted:
+if (requireNamespace("RColorBrewer", quietly = TRUE)) {
+  reviewWaffle(studies, Design, colors = "Set2")
+}
+
+```
