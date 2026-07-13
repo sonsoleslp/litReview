@@ -7,12 +7,15 @@ has_ggalluvial <- requireNamespace("ggalluvial", quietly = TRUE)
 has_treemapify <- requireNamespace("treemapify", quietly = TRUE)
 has_maps       <- requireNamespace("maps",       quietly = TRUE)
 has_ggfittext  <- requireNamespace("ggfittext",  quietly = TRUE)
+has_ggupset    <- requireNamespace("ggupset",    quietly = TRUE)
 has_rio        <- requireNamespace("rio",         quietly = TRUE)
 
-plot_choices <- c("Bar", "Histogram", "Waffle", "Pie/Donut", "Overlap", "Trend", "Table")
+plot_choices <- c("Bar", "Stacked", "Histogram", "Waffle", "Pie/Donut",
+                  "Overlap", "Trend", "Matrix", "Tree", "Table")
 if (has_maps)       plot_choices <- c(plot_choices, "Map")
 if (has_ggalluvial) plot_choices <- c(plot_choices, "Alluvial")
 if (has_treemapify) plot_choices <- c(plot_choices, "Treemap")
+if (has_ggupset)    plot_choices <- c(plot_choices, "UpSet")
 
 app_theme <- bs_theme(
   bootswatch = "minty", primary = "#7ea9c7", secondary = "#76b7b2",
@@ -47,8 +50,18 @@ palette_selectize <- function(inputId, label, choices, selected = NULL) {
                  options = list(render = I(render_js)))
 }
 
+# Restored params arrive JSON-decoded, where multi-column fields come back as
+# lists (Shiny decodes nested input values without simplifying). Coerce them
+# back to plain character vectors so the plot functions accept them.
+normalize_params <- function(p) {
+  for (f in c("cols", "matrix_cols", "tree_cols"))
+    if (!is.null(p[[f]])) p[[f]] <- as.character(unlist(p[[f]]))
+  p
+}
+
 # -- Build a plot from an explicit params list (no input$ dependency) ----------
 build_plot_from_params <- function(df, p) {
+  p   <- normalize_params(p)
   typ <- p$plot_type
   bs  <- p$base_size %||% 12
   sep <- p$sep %||% "\r\n"
@@ -57,6 +70,7 @@ build_plot_from_params <- function(df, p) {
   na_lab <- if (!na_rm) (p$na_label %||% "Not reported") else "Not reported"
   na_pct <- if (!na_rm) (p$na_in_percent %||% TRUE) else TRUE
   na_lst <- if (!na_rm) (p$na_last %||% FALSE) else FALSE
+  pal <- if (!is.null(p$palette) && nzchar(p$palette)) p$palette else PALETTE
 
   switch(typ,
     "Bar" = {
@@ -76,11 +90,11 @@ build_plot_from_params <- function(df, p) {
         base_size = bs, na.rm = na_rm, na_label = na_lab))
     },
     "Waffle" = rlang::inject(
-      reviewWaffle(df, !!rlang::sym(p$col), sep = sep,
+      reviewWaffle(df, !!rlang::sym(p$col), sep = sep, colors = pal,
         ncol = p$ncol_waffle %||% 5, study_id = !!sid, base_size = bs,
         na.rm = na_rm, na_label = na_lab, na_in_percent = na_pct, na_last = na_lst)),
     "Pie/Donut" = rlang::inject(
-      reviewPie(df, !!rlang::sym(p$col), sep = sep,
+      reviewPie(df, !!rlang::sym(p$col), sep = sep, colors = pal,
         donut = p$donut %||% TRUE, study_id = !!sid, base_size = bs,
         na.rm = na_rm, na_label = na_lab, na_in_percent = na_pct, na_last = na_lst)),
     "Overlap" = rlang::inject(
@@ -91,26 +105,47 @@ build_plot_from_params <- function(df, p) {
     "Trend" = rlang::inject(
       reviewTrend(df, !!rlang::sym(p$col),
         year_col = !!rlang::sym(p$year_col %||% "Year"), sep = sep, base_size = bs,
-        na.rm = na_rm, na_label = na_lab, labels = p$trend_labels %||% "none",
-        study_id = !!sid)),
+        colors = pal, na.rm = na_rm, na_label = na_lab, na_last = na_lst,
+        labels = p$trend_labels %||% "none", study_id = !!sid)),
     "Map" = rlang::inject(
       reviewMap(df, country_col = !!rlang::sym(p$country_col %||% "Country"),
         sep = sep, fill = p$fill_map %||% PALETTE[7], base_size = bs, na.rm = na_rm)),
     "Alluvial" = rlang::inject(
       reviewAlluvial(df, p$cols, sep = sep, study_id = !!sid, base_size = bs,
-        na.rm = na_rm, na_label = na_lab, labels = p$alluv_labels %||% "none",
+        colors = pal, na.rm = na_rm, na_label = na_lab,
+        labels = p$alluv_labels %||% "none",
         flow_labels = p$flow_labels %||% FALSE, flow_alpha = p$flow_alpha %||% 0.25,
         stratum_width = p$stratum_width %||% 0.5)),
     "Treemap" = {
       cb <- if (!is.null(p$color_by) && nzchar(p$color_by)) rlang::sym(p$color_by) else NULL
       rlang::inject(reviewTreemap(df, !!rlang::sym(p$col),
-        color_by = !!cb, sep = sep, base_size = bs,
+        color_by = !!cb, sep = sep, base_size = bs, colors = pal,
         na.rm = na_rm, na_label = na_lab, study_id = !!sid,
         studlabs = p$studlabs_treemap %||% FALSE))
     },
     "Table" = rlang::inject(
       reviewTable(df, !!rlang::sym(p$col), sep = sep, study_id = !!sid,
-        na.rm = na_rm, na_label = na_lab, na_in_percent = na_pct, na_last = na_lst))
+        na.rm = na_rm, na_label = na_lab, na_in_percent = na_pct, na_last = na_lst)),
+    "Stacked" = rlang::inject(
+      reviewStackedBar(df, !!rlang::sym(p$col), !!rlang::sym(p$group),
+        position = p$stacked_position %||% "fill", sep = sep, study_id = !!sid,
+        fill = pal, base_size = bs, na.rm = na_rm, na_label = na_lab,
+        na_last = na_lst, labels = p$stacked_labels %||% TRUE)),
+    "UpSet" = rlang::inject(
+      reviewUpset(df, !!rlang::sym(p$col), sep = sep, study_id = !!sid,
+        base_size = bs, na.rm = na_rm, na_label = na_lab,
+        n_intersections = p$upset_n %||% 15, sort_by = p$upset_sort %||% "freq",
+        fill = p$fill_upset %||% "#7BB0D1")),
+    "Matrix" = rlang::inject(
+      reviewMatrix(df, p$matrix_cols,
+        color_by = if (!is.null(p$matrix_color) && nzchar(p$matrix_color)) p$matrix_color else NULL,
+        study_id = !!sid, show_counts = p$matrix_counts %||% TRUE, colors = pal,
+        base_size = bs, na.rm = na_rm, na_label = na_lab)),
+    "Tree" = rlang::inject(
+      reviewTree(df, p$tree_cols, study_id = !!sid, sep = sep, colors = pal,
+        show_members = p$tree_members %||% TRUE, counts = p$tree_counts %||% "none",
+        root_label = p$tree_root %||% "All studies", base_size = bs,
+        na.rm = na_rm, na_label = na_lab, na_last = na_lst))
   )
 }
 
@@ -223,6 +258,17 @@ ui <- page_sidebar(
               '<text x="24" y="7.5" font-size="4" fill="#333">3</text>',
               '<text x="18" y="15.5" font-size="4" fill="#333">2</text>',
               '<text x="30" y="23.5" font-size="4" fill="#333">5</text>')),
+            # Stacked: horizontal bars split into colored segments
+            pt_btn("pt_Stacked", "Stacked", s(
+              sprintf('<rect x="2" y="4" width="13" height="5" fill="%s"/>', pal[1]),
+              sprintf('<rect x="15" y="4" width="8" height="5" fill="%s"/>', pal[2]),
+              sprintf('<rect x="23" y="4" width="6" height="5" fill="%s"/>', pal[3]),
+              sprintf('<rect x="2" y="12" width="8" height="5" fill="%s"/>', pal[1]),
+              sprintf('<rect x="10" y="12" width="11" height="5" fill="%s"/>', pal[2]),
+              sprintf('<rect x="21" y="12" width="8" height="5" fill="%s"/>', pal[3]),
+              sprintf('<rect x="2" y="20" width="17" height="5" fill="%s"/>', pal[1]),
+              sprintf('<rect x="19" y="20" width="6" height="5" fill="%s"/>', pal[2]),
+              sprintf('<rect x="25" y="20" width="4" height="5" fill="%s"/>', pal[3]))),
             # Histogram: adjacent vertical bars (no gaps)
             pt_btn("pt_Histogram", "Histogram", s(
               sprintf('<rect x="2"  y="20" width="4" height="6"  fill="%s"/>', pal[1]),
@@ -308,7 +354,54 @@ ui <- page_sidebar(
                 sprintf('<rect x="2" y="2" width="16" height="14" rx="1" fill="%s"/>', pal[1]),
                 sprintf('<rect x="20" y="2" width="10" height="14" rx="1" fill="%s"/>', pal[2]),
                 sprintf('<rect x="2" y="18" width="10" height="10" rx="1" fill="%s"/>', pal[3]),
-                sprintf('<rect x="14" y="18" width="16" height="10" rx="1" fill="%s"/>', pal[4])))
+                sprintf('<rect x="14" y="18" width="16" height="10" rx="1" fill="%s"/>', pal[4]))),
+            # UpSet: intersection bars over a dot matrix
+            if ("UpSet" %in% plot_choices)
+              pt_btn("pt_UpSet", "UpSet", s(
+                sprintf('<rect x="3"  y="3"  width="4" height="11" fill="%s"/>', pal[7]),
+                sprintf('<rect x="9"  y="6"  width="4" height="8"  fill="%s"/>', pal[7]),
+                sprintf('<rect x="15" y="9"  width="4" height="5"  fill="%s"/>', pal[7]),
+                sprintf('<rect x="21" y="10" width="4" height="4"  fill="%s"/>', pal[7]),
+                '<line x1="5" y1="19" x2="5" y2="25" stroke="#888" stroke-width="1"/>',
+                '<line x1="23" y1="19" x2="23" y2="25" stroke="#888" stroke-width="1"/>',
+                sprintf('<circle cx="5"  cy="19" r="1.7" fill="%s"/>', pal[7]),
+                sprintf('<circle cx="5"  cy="25" r="1.7" fill="%s"/>', pal[7]),
+                sprintf('<circle cx="11" cy="19" r="1.7" fill="%s"/>', pal[7]),
+                '<circle cx="11" cy="25" r="1.7" fill="#ccc"/>',
+                '<circle cx="17" cy="19" r="1.7" fill="#ccc"/>',
+                sprintf('<circle cx="17" cy="25" r="1.7" fill="%s"/>', pal[7]),
+                sprintf('<circle cx="23" cy="19" r="1.7" fill="%s"/>', pal[7]),
+                sprintf('<circle cx="23" cy="25" r="1.7" fill="%s"/>', pal[7]))),
+            # Matrix: study x criteria grid of coded tiles
+            pt_btn("pt_Matrix", "Matrix", s(
+              # background grid (empty cells)
+              paste(unlist(lapply(c(2,9,16,23), function(x)
+                lapply(c(3,11,19), function(y) sprintf(
+                  '<rect x="%d" y="%d" width="6" height="6" fill="#f4f4e2"/>', x, y)))),
+                collapse = ""),
+              # row 1 (one document type)
+              sprintf('<rect x="2" y="3" width="6" height="6" fill="%s"/>', pal[1]),
+              sprintf('<rect x="9" y="3" width="6" height="6" fill="%s"/>', pal[1]),
+              sprintf('<rect x="23" y="3" width="6" height="6" fill="%s"/>', pal[1]),
+              # row 2
+              sprintf('<rect x="2" y="11" width="6" height="6" fill="%s"/>', pal[2]),
+              sprintf('<rect x="16" y="11" width="6" height="6" fill="%s"/>', pal[2]),
+              sprintf('<rect x="23" y="11" width="6" height="6" fill="%s"/>', pal[2]),
+              # row 3
+              sprintf('<rect x="9" y="19" width="6" height="6" fill="%s"/>', pal[6]),
+              sprintf('<rect x="16" y="19" width="6" height="6" fill="%s"/>', pal[6]),
+              '<text x="3.2" y="8" font-size="5" fill="#fff" font-weight="bold">F</text>',
+              '<text x="24.2" y="8" font-size="5" fill="#fff" font-weight="bold">D</text>',
+              '<text x="3.2" y="16" font-size="5" fill="#fff" font-weight="bold">P</text>',
+              '<text x="10.2" y="24" font-size="5" fill="#fff" font-weight="bold">M</text>')),
+            # Tree: left-to-right hierarchy of nodes
+            pt_btn("pt_Tree", "Tree", s(
+              '<path d="M8,16 H14 M14,16 V6 M14,16 V26 M14,6 H20 M14,26 H20" stroke="#999" stroke-width="1.2" fill="none"/>',
+              sprintf('<rect x="2" y="13" width="6" height="6" rx="1.5" fill="%s"/>', pal[5]),
+              sprintf('<rect x="20" y="3" width="9" height="6" rx="1.5" fill="%s"/>', pal[1]),
+              sprintf('<rect x="20" y="23" width="9" height="6" rx="1.5" fill="%s"/>', pal[2]),
+              sprintf('<rect x="20" y="13" width="9" height="6" rx="1.5" fill="%s"/>', pal[6]),
+              '<path d="M14,16 H20" stroke="#999" stroke-width="1.2" fill="none"/>'))
           )
         },
         # Hidden text input to drive conditionalPanel via input.plot_type
@@ -317,7 +410,7 @@ ui <- page_sidebar(
         selectInput("study_id", "Study ID column", choices = NULL),
 
         conditionalPanel(
-          "!['Overlap','Alluvial','Map'].includes(input.plot_type)",
+          "!['Overlap','Alluvial','Map','Matrix','Tree'].includes(input.plot_type)",
           selectInput("col", "Column", choices = NULL)),
         conditionalPanel("input.plot_type === 'Overlap'",
           selectInput("col1", "Column 1 (x-axis)", choices = NULL),
@@ -325,6 +418,19 @@ ui <- page_sidebar(
         conditionalPanel("input.plot_type === 'Alluvial'",
           selectizeInput("cols", "Columns (select 2+)",
                          choices = NULL, multiple = TRUE)),
+        conditionalPanel("input.plot_type === 'Matrix'",
+          selectizeInput("matrix_cols", "Criteria columns (select 1+)",
+                         choices = NULL, multiple = TRUE),
+          selectInput("matrix_color", "Color by (optional)", choices = NULL),
+          checkboxInput("matrix_counts", "Show counts in headers", TRUE)),
+        conditionalPanel("input.plot_type === 'Tree'",
+          selectizeInput("tree_cols", "Hierarchy columns (root → leaf, in order)",
+                         choices = NULL, multiple = TRUE),
+          textInput("tree_root", "Root label", value = "All studies"),
+          selectInput("tree_counts", "Node counts",
+                      choices = c("None" = "none", "Count" = "count",
+                                  "Percent" = "percent", "Count + percent" = "both")),
+          checkboxInput("tree_members", "Show study lists at leaves", TRUE)),
         conditionalPanel("input.plot_type === 'Map'",
           selectInput("country_col", "Country column", choices = NULL)),
         conditionalPanel("input.plot_type === 'Trend'",
@@ -336,19 +442,11 @@ ui <- page_sidebar(
           selected = "\r\n"),
 
         conditionalPanel("input.plot_type === 'Bar'",
-          palette_selectize("fill_bar", "Fill color",
-                            choices = c(palette_choices, "Custom" = "custom")),
-          conditionalPanel("input.fill_bar === 'custom'",
-            textInput("fill_bar_custom", NULL, value = "#7BB0D1",
-                      placeholder = "#hex")),
           sliderInput("bar_width", "Bar width", 0.1, 1, 0.6, 0.05),
           sliderInput("label_space", "Label space", 1, 3, 1.6, 0.1),
           if (has_ggfittext) checkboxInput("studlabs_bar", "Show study labels", FALSE)),
         conditionalPanel("input.plot_type === 'Histogram'",
           selectInput("fill_by_hist", "Stack by (optional)", choices = NULL),
-          conditionalPanel("!input.fill_by_hist",
-            palette_selectize("fill_hist", "Fill color",
-                              choices = palette_choices, selected = "#7BB0D1")),
           numericInput("bins_hist", "Number of bins", value = 30, min = 2, max = 200, step = 1),
           numericInput("binwidth_hist", "Bin width (optional, overrides bins)",
                        value = NA, min = 0, step = 1)),
@@ -357,15 +455,10 @@ ui <- page_sidebar(
         conditionalPanel("input.plot_type === 'Waffle'",
           numericInput("ncol_waffle", "Grid columns", 5, min = 1, max = 30)),
         conditionalPanel("input.plot_type === 'Overlap'",
-          palette_selectize("fill_overlap", "High color",
-                            choices = palette_choices, selected = PALETTE[7]),
           checkboxInput("studlabs_overlap", "Study labels in tiles", FALSE)),
         conditionalPanel("input.plot_type === 'Trend'",
           selectInput("trend_labels", "Bar labels",
                       choices = c("none", "count", "percent", "both", "studies"))),
-        conditionalPanel("input.plot_type === 'Map'",
-          palette_selectize("fill_map", "High color",
-                            choices = palette_choices, selected = PALETTE[7])),
         conditionalPanel("input.plot_type === 'Treemap'",
           selectInput("color_by", "Color by (optional)", choices = NULL),
           checkboxInput("studlabs_treemap", "Show study labels", FALSE)),
@@ -374,7 +467,19 @@ ui <- page_sidebar(
                       choices = c("none", "prop", "count", "both")),
           checkboxInput("flow_labels", "Show flow labels", FALSE),
           sliderInput("flow_alpha", "Flow transparency", 0, 1, 0.25, 0.05),
-          sliderInput("stratum_width", "Stratum width", 0.1, 1, 0.5, 0.05))
+          sliderInput("stratum_width", "Stratum width", 0.1, 1, 0.5, 0.05)),
+        conditionalPanel("input.plot_type === 'Stacked'",
+          selectInput("group", "Split by (fill)", choices = NULL),
+          radioButtons("stacked_position", "Bars show",
+                       choices = c("Proportion (100%)" = "fill",
+                                   "Counts" = "stack"),
+                       selected = "fill"),
+          checkboxInput("stacked_labels", "Show segment labels", TRUE)),
+        conditionalPanel("input.plot_type === 'UpSet'",
+          selectInput("upset_sort", "Sort combinations by",
+                      choices = c("Frequency" = "freq", "Set size" = "degree")),
+          numericInput("upset_n", "Max combinations", value = 15,
+                       min = 2, max = 40, step = 1))
       ),
 
       # -- Appearance & NA -------------------------------------------------------
@@ -382,11 +487,50 @@ ui <- page_sidebar(
         icon = icon("palette"),
         sliderInput("base_size", "Base font size", 8, 24, 12, 1),
         tags$hr(),
+        conditionalPanel("input.plot_type === 'Bar'",
+          palette_selectize("fill_bar", "Fill color",
+                            choices = c(palette_choices, "Custom" = "custom")),
+          conditionalPanel("input.fill_bar === 'custom'",
+            textInput("fill_bar_custom", NULL, value = "#7BB0D1",
+                      placeholder = "#hex"))),
+        conditionalPanel("input.plot_type === 'Histogram' && !input.fill_by_hist",
+          palette_selectize("fill_hist", "Fill color",
+                            choices = palette_choices, selected = "#7BB0D1")),
+        conditionalPanel("input.plot_type === 'Overlap'",
+          palette_selectize("fill_overlap", "High color",
+                            choices = palette_choices, selected = PALETTE[7])),
+        conditionalPanel("input.plot_type === 'Map'",
+          palette_selectize("fill_map", "High color",
+                            choices = palette_choices, selected = PALETTE[7])),
+        conditionalPanel("input.plot_type === 'UpSet'",
+          palette_selectize("fill_upset", "Bar color",
+                            choices = palette_choices, selected = "#7BB0D1")),
+        conditionalPanel(
+          "['Waffle','Pie/Donut','Trend','Alluvial','Treemap','Stacked','Matrix','Tree'].includes(input.plot_type)",
+          selectInput("palette", "Color palette",
+                      choices = c("litReview default" = "",
+                                  "ColorBrewer: Set1" = "Set1",
+                                  "ColorBrewer: Set2" = "Set2",
+                                  "ColorBrewer: Set3" = "Set3",
+                                  "ColorBrewer: Dark2" = "Dark2",
+                                  "ColorBrewer: Paired" = "Paired",
+                                  "ColorBrewer: Accent" = "Accent",
+                                  "ColorBrewer: Pastel1" = "Pastel1",
+                                  "ColorBrewer: Pastel2" = "Pastel2"))),
+        tags$hr(),
         checkboxInput("na_rm", "Remove NAs", TRUE),
         conditionalPanel("!input.na_rm",
-          textInput("na_label", "NA label", "Not reported"),
-          checkboxInput("na_in_percent", "Include NA in percent", TRUE),
-          checkboxInput("na_last", "Place NA last", FALSE))
+          # na_label applies everywhere except the choropleth Map
+          conditionalPanel("input.plot_type !== 'Map'",
+            textInput("na_label", "NA label", "Not reported")),
+          # sample-wide percentage denominator: only the frequency-table plots
+          conditionalPanel(
+            "['Bar','Pie/Donut','Waffle','Table'].includes(input.plot_type)",
+            checkboxInput("na_in_percent", "Include NA in percent", TRUE)),
+          # order the NA category last: plots with an explicit category order
+          conditionalPanel(
+            "['Bar','Pie/Donut','Waffle','Table','Stacked','Trend','Tree'].includes(input.plot_type)",
+            checkboxInput("na_last", "Place NA last", FALSE)))
       )
     )
   ),
@@ -479,12 +623,17 @@ server <- function(input, output, session) {
     if (!is.null(p$study_id)) needed <- c(needed, p$study_id)
     switch(p$plot_type %||% "",
       "Bar" =, "Waffle" =, "Pie/Donut" =, "Trend" =, "Treemap" =,
-      "Table" =, "Histogram" = { needed <- c(needed, p$col) },
+      "Table" =, "Histogram" =, "UpSet" = { needed <- c(needed, p$col) },
+      "Stacked"  = { needed <- c(needed, p$col, p$group) },
       "Overlap"  = { needed <- c(needed, p$col1, p$col2) },
       "Alluvial" = { needed <- c(needed, p$cols) },
+      "Matrix"   = { needed <- c(needed, p$matrix_cols) },
+      "Tree"     = { needed <- c(needed, p$tree_cols) },
       "Map"      = { needed <- c(needed, p$country_col) })
     if (identical(p$plot_type, "Trend"))
       needed <- c(needed, p$year_col)
+    if (identical(p$plot_type, "Matrix") && nzchar(p$matrix_color %||% ""))
+      needed <- c(needed, p$matrix_color)
     if (identical(p$plot_type, "Treemap") && nzchar(p$color_by %||% ""))
       needed <- c(needed, p$color_by)
     if (identical(p$plot_type, "Histogram") && nzchar(p$fill_by_hist %||% ""))
@@ -527,8 +676,11 @@ server <- function(input, output, session) {
     ctr_def <- if ("Country" %in% cols) "Country" else cols[1]
     other   <- setdiff(cols, id_def)
     col_def <- if (length(other)) other[1] else cols[1]
+    grp_pool <- setdiff(cols, c(id_def, col_def))
+    grp_def <- if (length(grp_pool)) grp_pool[1] else col_def
     updateSelectInput(session, "study_id",    choices = cols, selected = id_def)
     updateSelectInput(session, "col",         choices = cols, selected = col_def)
+    updateSelectInput(session, "group",       choices = cols, selected = grp_def)
     updateSelectInput(session, "col1",        choices = cols, selected = cols[1])
     updateSelectInput(session, "col2",        choices = cols,
                       selected = if (length(cols) >= 2) cols[2] else cols[1])
@@ -538,6 +690,19 @@ server <- function(input, output, session) {
     updateSelectInput(session, "year_col",    choices = cols, selected = yr_def)
     updateSelectInput(session, "color_by",    choices = c("(None)" = "", cols), selected = "")
     updateSelectInput(session, "fill_by_hist", choices = c("(None)" = "", cols), selected = "")
+    # Prefer single-character coded columns (e.g. F/P/M) as the matrix default
+    coded <- cols[vapply(cols, function(cc) {
+      v <- trimws(as.character(df[[cc]])); v <- v[!is.na(v) & nzchar(v)]
+      length(v) > 0 && all(nchar(v) == 1)
+    }, logical(1))]
+    mtx_def <- if (length(coded) >= 1) coded else
+      if (length(other) >= 2) other[1:2] else other[1]
+    updateSelectizeInput(session, "matrix_cols", choices = cols, selected = mtx_def)
+    updateSelectInput(session, "matrix_color", choices = c("(None)" = "", cols), selected = "")
+    tree_def <- if (all(c("InterventionType", "Intervention") %in% cols))
+      c("InterventionType", "Intervention")
+    else if (length(other) >= 2) other[1:2] else other[1]
+    updateSelectizeInput(session, "tree_cols", choices = cols, selected = tree_def)
     pending_data_refresh(TRUE)
     if (!restoring()) nav_select("main_tabs", "Data Preview")
   })
@@ -579,7 +744,15 @@ server <- function(input, output, session) {
       alluv_labels = input$alluv_labels, flow_labels = input$flow_labels,
       flow_alpha = input$flow_alpha, stratum_width = input$stratum_width,
       fill_by_hist = input$fill_by_hist, fill_hist = input$fill_hist,
-      bins_hist = input$bins_hist, binwidth_hist = input$binwidth_hist)
+      bins_hist = input$bins_hist, binwidth_hist = input$binwidth_hist,
+      group = input$group, stacked_position = input$stacked_position,
+      stacked_labels = input$stacked_labels, fill_upset = input$fill_upset,
+      upset_sort = input$upset_sort, upset_n = input$upset_n,
+      matrix_cols = input$matrix_cols, matrix_color = input$matrix_color,
+      matrix_counts = input$matrix_counts,
+      tree_cols = input$tree_cols, tree_members = input$tree_members,
+      tree_counts = input$tree_counts, tree_root = input$tree_root,
+      palette = input$palette)
   }
 
   restore_params <- function(p) {
@@ -620,6 +793,20 @@ server <- function(input, output, session) {
     updateSelectInput(session, "fill_hist", selected = p$fill_hist %||% "#7BB0D1")
     updateNumericInput(session, "bins_hist", value = p$bins_hist %||% 30)
     updateNumericInput(session, "binwidth_hist", value = p$binwidth_hist %||% NA)
+    updateSelectInput(session, "group", selected = p$group)
+    updateRadioButtons(session, "stacked_position", selected = p$stacked_position %||% "fill")
+    updateCheckboxInput(session, "stacked_labels", value = p$stacked_labels %||% TRUE)
+    updateSelectInput(session, "fill_upset", selected = p$fill_upset %||% "#7BB0D1")
+    updateSelectInput(session, "upset_sort", selected = p$upset_sort %||% "freq")
+    updateNumericInput(session, "upset_n", value = p$upset_n %||% 15)
+    updateSelectizeInput(session, "matrix_cols", selected = p$matrix_cols)
+    updateSelectInput(session, "matrix_color", selected = p$matrix_color %||% "")
+    updateCheckboxInput(session, "matrix_counts", value = p$matrix_counts %||% TRUE)
+    updateSelectizeInput(session, "tree_cols", selected = p$tree_cols)
+    updateCheckboxInput(session, "tree_members", value = p$tree_members %||% TRUE)
+    updateSelectInput(session, "tree_counts", selected = p$tree_counts %||% "none")
+    updateTextInput(session, "tree_root", value = p$tree_root %||% "All studies")
+    updateSelectInput(session, "palette", selected = p$palette %||% "")
   }
 
   # -- Build plot from current sidebar (reactive, tracks all inputs) -----------
@@ -633,6 +820,7 @@ server <- function(input, output, session) {
     na_lab <- if (!na_rm) input$na_label else "Not reported"
     na_pct <- if (!na_rm) input$na_in_percent else TRUE
     na_lst <- if (!na_rm) input$na_last else FALSE
+    pal <- if (nzchar(input$palette %||% "")) input$palette else PALETTE
 
     tryCatch(
       switch(typ,
@@ -652,12 +840,12 @@ server <- function(input, output, session) {
             bins = input$bins_hist, binwidth = bw, fill = input$fill_hist,
             sep = sep, base_size = bs, na.rm = na_rm, na_label = na_lab)) },
         "Waffle" = { req(input$col); rlang::inject(
-          reviewWaffle(df, !!rlang::sym(input$col), sep = sep,
+          reviewWaffle(df, !!rlang::sym(input$col), sep = sep, colors = pal,
             ncol = input$ncol_waffle, study_id = !!sid, base_size = bs,
             na.rm = na_rm, na_label = na_lab, na_in_percent = na_pct,
             na_last = na_lst)) },
         "Pie/Donut" = { req(input$col); rlang::inject(
-          reviewPie(df, !!rlang::sym(input$col), sep = sep,
+          reviewPie(df, !!rlang::sym(input$col), sep = sep, colors = pal,
             donut = input$donut, study_id = !!sid, base_size = bs,
             na.rm = na_rm, na_label = na_lab, na_in_percent = na_pct,
             na_last = na_lst)) },
@@ -669,26 +857,49 @@ server <- function(input, output, session) {
         "Trend" = { req(input$col, input$year_col); rlang::inject(
           reviewTrend(df, !!rlang::sym(input$col),
             year_col = !!rlang::sym(input$year_col), sep = sep, base_size = bs,
-            na.rm = na_rm, na_label = na_lab, labels = input$trend_labels,
-            study_id = !!sid)) },
+            colors = pal, na.rm = na_rm, na_label = na_lab, na_last = na_lst,
+            labels = input$trend_labels, study_id = !!sid)) },
         "Map" = { req(input$country_col); rlang::inject(
           reviewMap(df, country_col = !!rlang::sym(input$country_col),
             sep = sep, fill = input$fill_map, base_size = bs, na.rm = na_rm)) },
         "Alluvial" = { req(input$cols, length(input$cols) >= 2); rlang::inject(
           reviewAlluvial(df, input$cols, sep = sep, study_id = !!sid,
-            base_size = bs, na.rm = na_rm, na_label = na_lab,
+            base_size = bs, colors = pal, na.rm = na_rm, na_label = na_lab,
             labels = input$alluv_labels, flow_labels = input$flow_labels,
             flow_alpha = input$flow_alpha, stratum_width = input$stratum_width)) },
         "Treemap" = { req(input$col)
           cb <- if (nzchar(input$color_by)) rlang::sym(input$color_by) else NULL
           rlang::inject(reviewTreemap(df, !!rlang::sym(input$col),
-            color_by = !!cb, sep = sep, base_size = bs,
+            color_by = !!cb, sep = sep, base_size = bs, colors = pal,
             na.rm = na_rm, na_label = na_lab, study_id = !!sid,
             studlabs = input$studlabs_treemap)) },
         "Table" = { req(input$col); rlang::inject(
           reviewTable(df, !!rlang::sym(input$col), sep = sep, study_id = !!sid,
             na.rm = na_rm, na_label = na_lab, na_in_percent = na_pct,
-            na_last = na_lst)) }
+            na_last = na_lst)) },
+        "Stacked" = { req(input$col, input$group); rlang::inject(
+          reviewStackedBar(df, !!rlang::sym(input$col), !!rlang::sym(input$group),
+            position = input$stacked_position %||% "fill", sep = sep,
+            study_id = !!sid, fill = pal, base_size = bs, na.rm = na_rm,
+            na_label = na_lab, na_last = na_lst,
+            labels = isTRUE(input$stacked_labels))) },
+        "UpSet" = { req(input$col); rlang::inject(
+          reviewUpset(df, !!rlang::sym(input$col), sep = sep, study_id = !!sid,
+            base_size = bs, na.rm = na_rm, na_label = na_lab,
+            n_intersections = input$upset_n %||% 15,
+            sort_by = input$upset_sort %||% "freq",
+            fill = input$fill_upset %||% "#7BB0D1")) },
+        "Matrix" = { req(input$matrix_cols, length(input$matrix_cols) >= 1)
+          cb <- if (nzchar(input$matrix_color %||% "")) input$matrix_color else NULL
+          rlang::inject(reviewMatrix(df, input$matrix_cols, color_by = cb,
+            study_id = !!sid, show_counts = isTRUE(input$matrix_counts),
+            colors = pal, base_size = bs, na.rm = na_rm, na_label = na_lab)) },
+        "Tree" = { req(input$tree_cols, length(input$tree_cols) >= 1)
+          rlang::inject(reviewTree(df, input$tree_cols, study_id = !!sid,
+            sep = sep, colors = pal, show_members = isTRUE(input$tree_members),
+            counts = input$tree_counts %||% "none",
+            root_label = input$tree_root %||% "All studies",
+            base_size = bs, na.rm = na_rm, na_label = na_lab, na_last = na_lst)) }
       ),
       error = function(e) NULL
     )
@@ -708,6 +919,9 @@ server <- function(input, output, session) {
     col_label <- isolate(switch(typ,
       "Overlap"  = paste(input$col1, "vs", input$col2),
       "Alluvial" = paste(input$cols, collapse = ", "),
+      "Stacked"  = paste(input$col, "by", input$group),
+      "Matrix"   = paste(input$matrix_cols, collapse = ", "),
+      "Tree"     = paste(input$tree_cols, collapse = " > "),
       "Map"      = input$country_col, input$col))
     title  <- paste0(typ, ": ", col_label)
     params <- isolate(snapshot_params())
@@ -749,6 +963,9 @@ server <- function(input, output, session) {
     col_label <- switch(typ,
       "Overlap"  = paste(input$col1, "vs", input$col2),
       "Alluvial" = paste(input$cols, collapse = ", "),
+      "Stacked"  = paste(input$col, "by", input$group),
+      "Matrix"   = paste(input$matrix_cols, collapse = ", "),
+      "Tree"     = paste(input$tree_cols, collapse = " > "),
       "Map"      = input$country_col, input$col)
     title  <- paste0(typ, ": ", col_label)
     params <- snapshot_params()
@@ -846,6 +1063,7 @@ server <- function(input, output, session) {
       restored <- 0L
       for (pm in state$plots) {
         tryCatch({
+          pm$params <- normalize_params(pm$params)
           result <- build_plot_from_params(df, pm$params)
           id <- pm$id
           entry <- list(id = id, type = pm$type, title = pm$title,
@@ -1005,12 +1223,15 @@ server <- function(input, output, session) {
                    paste0(", study_id = ", col(p$study_id))
       bs_arg  <- if (identical(p$base_size, 12L) || identical(p$base_size, 12)) "" else
                    paste0(", base_size = ", p$base_size)
-      na_args <- ""
-      if (!isTRUE(p$na_rm)) {
-        na_args <- paste0(", na.rm = FALSE, na_label = ", fmt(p$na_label %||% "Not reported"))
-        if (!isTRUE(p$na_in_percent)) na_args <- paste0(na_args, ", na_in_percent = FALSE")
-        if (isTRUE(p$na_last)) na_args <- paste0(na_args, ", na_last = TRUE")
-      }
+      pal_col <- if (!is.null(p$palette) && nzchar(p$palette)) paste0(", colors = ", fmt(p$palette)) else ""
+      pal_fill <- if (!is.null(p$palette) && nzchar(p$palette)) paste0(", fill = ", fmt(p$palette)) else ""
+      # Build NA-argument fragments matched to what each function accepts
+      na_core <- if (!isTRUE(p$na_rm))
+        paste0(", na.rm = FALSE, na_label = ", fmt(p$na_label %||% "Not reported")) else ""
+      na_last_str <- if (!isTRUE(p$na_rm) && isTRUE(p$na_last)) ", na_last = TRUE" else ""
+      na_pct_str  <- if (!isTRUE(p$na_rm) && !isTRUE(p$na_in_percent)) ", na_in_percent = FALSE" else ""
+      na_args      <- paste0(na_core, na_pct_str, na_last_str)   # Bar/Pie/Waffle/Table
+      na_core_last <- paste0(na_core, na_last_str)               # Trend/Stacked/Tree
       call <- switch(typ,
         "Bar" = {
           fill <- if (identical(p$fill_bar, "custom")) p$fill_bar_custom else p$fill_bar
@@ -1035,21 +1256,21 @@ server <- function(input, output, session) {
         },
         "Waffle" = {
           nc_arg <- if (identical(p$ncol_waffle, 5L) || identical(p$ncol_waffle, 5)) "" else paste0(", ncol = ", p$ncol_waffle)
-          paste0("p", i, " <- reviewWaffle(data, ", col(p$col), nc_arg, sep_arg, sid_arg, bs_arg, na_args, ")")
+          paste0("p", i, " <- reviewWaffle(data, ", col(p$col), nc_arg, pal_col, sep_arg, sid_arg, bs_arg, na_args, ")")
         },
         "Pie/Donut" = {
           d_arg <- if (isTRUE(p$donut)) "" else ", donut = FALSE"
-          paste0("p", i, " <- reviewPie(data, ", col(p$col), d_arg, sep_arg, sid_arg, bs_arg, na_args, ")")
+          paste0("p", i, " <- reviewPie(data, ", col(p$col), d_arg, pal_col, sep_arg, sid_arg, bs_arg, na_args, ")")
         },
         "Overlap" = {
           fill_arg <- if (identical(p$fill_overlap, "#7BB0D1") || identical(p$fill_overlap, PALETTE[7])) "" else paste0(", fill = ", fmt(p$fill_overlap))
           sl_arg <- if (isTRUE(p$studlabs_overlap)) ", studlabs = TRUE" else ""
-          paste0("p", i, " <- reviewOverlap(data, ", col(p$col1), ", ", col(p$col2), fill_arg, sl_arg, sep_arg, sid_arg, bs_arg, na_args, ")")
+          paste0("p", i, " <- reviewOverlap(data, ", col(p$col1), ", ", col(p$col2), fill_arg, sl_arg, sep_arg, sid_arg, bs_arg, na_core, ")")
         },
         "Trend" = {
           yr_arg <- if (identical(p$year_col, "Year")) "" else paste0(", year_col = ", col(p$year_col))
           lb_arg <- if (identical(p$trend_labels, "none")) "" else paste0(", labels = ", fmt(p$trend_labels))
-          paste0("p", i, " <- reviewTrend(data, ", col(p$col), yr_arg, lb_arg, sep_arg, sid_arg, bs_arg, na_args, ")")
+          paste0("p", i, " <- reviewTrend(data, ", col(p$col), yr_arg, lb_arg, pal_col, sep_arg, sid_arg, bs_arg, na_core_last, ")")
         },
         "Map" = {
           cc_arg <- if (identical(p$country_col, "Country")) "" else paste0(", country_col = ", col(p$country_col))
@@ -1063,14 +1284,41 @@ server <- function(input, output, session) {
           fl_arg <- if (isTRUE(p$flow_labels)) ", flow_labels = TRUE" else ""
           fa_arg <- if (identical(p$flow_alpha, 0.25)) "" else paste0(", flow_alpha = ", p$flow_alpha)
           sw_arg <- if (identical(p$stratum_width, 0.5)) "" else paste0(", stratum_width = ", p$stratum_width)
-          paste0("p", i, " <- reviewAlluvial(data, ", cols_str, lb_arg, fl_arg, fa_arg, sw_arg, sep_arg, sid_arg, bs_arg, na_args, ")")
+          paste0("p", i, " <- reviewAlluvial(data, ", cols_str, lb_arg, fl_arg, fa_arg, sw_arg, pal_col, sep_arg, sid_arg, bs_arg, na_core, ")")
         },
         "Treemap" = {
           cb_arg <- if (!is.null(p$color_by) && nzchar(p$color_by)) paste0(", color_by = ", col(p$color_by)) else ""
           sl_arg <- if (isTRUE(p$studlabs_treemap)) ", studlabs = TRUE" else ""
-          paste0("p", i, " <- reviewTreemap(data, ", col(p$col), cb_arg, sl_arg, sep_arg, sid_arg, bs_arg, na_args, ")")
+          paste0("p", i, " <- reviewTreemap(data, ", col(p$col), cb_arg, sl_arg, pal_col, sep_arg, sid_arg, bs_arg, na_core, ")")
         },
-        "Table" = paste0("p", i, " <- reviewTable(data, ", col(p$col), sep_arg, sid_arg, na_args, ")")
+        "Table" = paste0("p", i, " <- reviewTable(data, ", col(p$col), sep_arg, sid_arg, na_args, ")"),
+        "Stacked" = {
+          pos_arg <- if (identical(p$stacked_position, "stack")) ", position = \"stack\"" else ""
+          lab_arg <- if (isFALSE(p$stacked_labels)) ", labels = FALSE" else ""
+          paste0("p", i, " <- reviewStackedBar(data, ", col(p$col), ", ", col(p$group),
+                 pos_arg, lab_arg, pal_fill, sep_arg, sid_arg, bs_arg, na_core_last, ")")
+        },
+        "UpSet" = {
+          srt_arg  <- if (identical(p$upset_sort, "degree")) ", sort_by = \"degree\"" else ""
+          n_arg    <- if (identical(p$upset_n, 15L) || identical(p$upset_n, 15)) "" else paste0(", n_intersections = ", p$upset_n)
+          fill_arg <- if (identical(p$fill_upset, "#7BB0D1")) "" else paste0(", fill = ", fmt(p$fill_upset))
+          na_simple <- if (!isTRUE(p$na_rm)) paste0(", na.rm = FALSE, na_label = ", fmt(p$na_label %||% "Not reported")) else ""
+          paste0("p", i, " <- reviewUpset(data, ", col(p$col),
+                 fill_arg, srt_arg, n_arg, sep_arg, sid_arg, bs_arg, na_simple, ")")
+        },
+        "Matrix" = {
+          cols_str <- paste0("c(", paste(vapply(p$matrix_cols, fmt, character(1)), collapse = ", "), ")")
+          cby_arg  <- if (!is.null(p$matrix_color) && nzchar(p$matrix_color)) paste0(", color_by = ", fmt(p$matrix_color)) else ""
+          sc_arg   <- if (isFALSE(p$matrix_counts)) ", show_counts = FALSE" else ""
+          paste0("p", i, " <- reviewMatrix(data, ", cols_str, cby_arg, sc_arg, pal_col, sid_arg, bs_arg, na_core, ")")
+        },
+        "Tree" = {
+          cols_str <- paste0("c(", paste(vapply(p$tree_cols, fmt, character(1)), collapse = ", "), ")")
+          sm_arg   <- if (isFALSE(p$tree_members)) ", show_members = FALSE" else ""
+          ct_arg   <- if (!identical(p$tree_counts %||% "none", "none")) paste0(", counts = ", fmt(p$tree_counts)) else ""
+          rt_arg   <- if (!identical(p$tree_root %||% "All studies", "All studies")) paste0(", root_label = ", fmt(p$tree_root)) else ""
+          paste0("p", i, " <- reviewTree(data, ", cols_str, ct_arg, rt_arg, sm_arg, pal_col, sep_arg, sid_arg, bs_arg, na_core_last, ")")
+        }
       )
       lines <- c(lines, call)
       if (typ != "Table") {

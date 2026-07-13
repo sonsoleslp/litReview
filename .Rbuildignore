@@ -14,3 +14,8 @@
 ^README\.html$
 ^README\.knit\.md$
 ^data-raw\/logo\.R$
+^vignettes/articles$
+^cran-comments\.md$
+^Rplots\.pdf$
+^vignettes/\.quarto$
+^vignettes/chapter\.qmd$

@@ -27,18 +27,48 @@ template:
     left: [intro, reference, articles]
     right: [search, github]
 
+articles:
+  - title: "Get started"
+    navbar: ~
+    contents:
+      - litReview
+
+  - title: "Plot types"
+    desc: "One article per plot type, covering every configuration option."
+    navbar: "Plot types"
+    contents:
+      - articles/bar
+      - articles/stacked-bar
+      - articles/histogram
+      - articles/waffle
+      - articles/pie
+      - articles/overlap
+      - articles/upset
+      - articles/trend
+      - articles/map
+      - articles/alluvial
+      - articles/treemap
+      - articles/matrix
+      - articles/tree
+      - articles/table
+
 reference:
   - title: "Visualization"
     desc: "Create summary plots"
     contents:
       - reviewBar
+      - reviewStackedBar
+      - reviewHistogram
       - reviewWaffle
       - reviewPie
       - reviewOverlap
+      - reviewUpset
       - reviewTrend
       - reviewMap
       - reviewAlluvial
       - reviewTreemap
+      - reviewMatrix
+      - reviewTree
 
   - title: "Tables"
     desc: "Formatted summary tables"
