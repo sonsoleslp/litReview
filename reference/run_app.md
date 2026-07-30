@@ -28,7 +28,7 @@ invisibly.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-run_app()
-} # }
+if (interactive()) {
+  run_app()
+}
 ```

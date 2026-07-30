@@ -96,7 +96,6 @@ object.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 df <- data.frame(
   StudyID  = paste0("S", 1:6),
   Design   = c("RCT", "Cohort", "RCT", "RCT", "Cohort", "RCT"),
@@ -105,6 +104,8 @@ df <- data.frame(
                "Positive", "Positive"),
   stringsAsFactors = FALSE
 )
-reviewAlluvial(df, c("Design", "Quality", "Outcome"))
-} # }
+if (requireNamespace("ggalluvial", quietly = TRUE)) {
+  reviewAlluvial(df, c("Design", "Quality", "Outcome"))
+}
+
 ```
