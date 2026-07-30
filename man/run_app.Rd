@@ -21,8 +21,8 @@ interface where plots are added as cards that can be individually
 downloaded or exported together as a ZIP file.
 }
 \examples{
-\dontrun{
-run_app()
+if (interactive()) {
+  run_app()
 }
 
 }

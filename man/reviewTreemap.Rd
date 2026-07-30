@@ -58,15 +58,15 @@ proportional to the count. Optionally color by a second column for
 a hierarchical view. Requires the \pkg{treemapify} package.
 }
 \examples{
-\dontrun{
 df <- data.frame(
   StudyID = paste0("S", 1:8),
   Design  = c("RCT", "Cohort", "RCT", "RCT", "Cohort", "RCT", "Cohort", "RCT"),
   Quality = c("High", "Low", "High", "Low", "Low", "High", "Low", "High"),
   stringsAsFactors = FALSE
 )
-reviewTreemap(df, Design)
-reviewTreemap(df, Design, color_by = Quality)
+if (requireNamespace("treemapify", quietly = TRUE)) {
+  reviewTreemap(df, Design)
+  reviewTreemap(df, Design, color_by = Quality)
 }
 
 }

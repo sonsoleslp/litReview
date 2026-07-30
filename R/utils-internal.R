@@ -95,7 +95,7 @@ levels_na_last <- function(lv, na_label, do) {
 
 #' Recycle a color vector to the required length
 #'
-#' A single ColorBrewer palette name is expanded first (see [resolve_palette()]).
+#' A single ColorBrewer palette name is expanded first (see `resolve_palette()`).
 #' Named vectors are returned as-is (ggplot2 matches by name).
 #' Unnamed vectors shorter than `n` are recycled with `rep_len`.
 #' @param colors Character vector of colors, or a ColorBrewer palette name.

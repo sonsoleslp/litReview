@@ -29,7 +29,9 @@
 #'   Country = c("Spain", "Spain", "Germany"),
 #'   stringsAsFactors = FALSE
 #' )
-#' reviewMap(df)
+#' if (requireNamespace("maps", quietly = TRUE)) {
+#'   reviewMap(df)
+#' }
 #'
 #' @export
 reviewMap <- function(data, country_col = Country, sep = "\r\n",

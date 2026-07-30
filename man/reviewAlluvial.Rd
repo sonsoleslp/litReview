@@ -65,7 +65,6 @@ Each study traces a path through the strata. Requires the
 \pkg{ggalluvial} package.
 }
 \examples{
-\dontrun{
 df <- data.frame(
   StudyID  = paste0("S", 1:6),
   Design   = c("RCT", "Cohort", "RCT", "RCT", "Cohort", "RCT"),
@@ -74,7 +73,8 @@ df <- data.frame(
                "Positive", "Positive"),
   stringsAsFactors = FALSE
 )
-reviewAlluvial(df, c("Design", "Quality", "Outcome"))
+if (requireNamespace("ggalluvial", quietly = TRUE)) {
+  reviewAlluvial(df, c("Design", "Quality", "Outcome"))
 }
 
 }

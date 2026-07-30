@@ -12,8 +12,8 @@
 #'   of [shiny::runApp()] invisibly.
 #'
 #' @examples
-#' \dontrun{
-#' run_app()
+#' if (interactive()) {
+#'   run_app()
 #' }
 #'
 #' @export
